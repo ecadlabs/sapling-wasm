@@ -1,6 +1,6 @@
 {
   "name": "@taquito/sapling-wasm",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0",
   "description": "Sapling Wasm bindings for Taquito and compatible consumers.",
   "author": "ECAD Labs Inc <info@ecadlabs.com>",
   "homepage": "https://github.com/ecadlabs/sapling-wasm",
