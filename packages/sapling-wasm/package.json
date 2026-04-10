@@ -1,24 +1,41 @@
 {
-  "name": "@airgap/sapling-wasm",
-  "author": "Papers.ch <contact@papers.ch>",
-  "version": "0.0.10",
-  "homepage": "https://www.airgap.it",
+  "name": "@taquito/sapling-wasm",
+  "version": "0.1.0-alpha.0",
+  "description": "Sapling Wasm bindings for Taquito and compatible consumers.",
+  "author": "ECAD Labs Inc <info@ecadlabs.com>",
+  "homepage": "https://github.com/ecadlabs/sapling-wasm",
   "repository": {
     "type": "git",
-    "url": "https://github.com/airgap-it/airgap-sapling"
+    "url": "git+https://github.com/ecadlabs/sapling-wasm.git",
+    "directory": "packages/sapling-wasm"
+  },
+  "bugs": {
+    "url": "https://github.com/ecadlabs/sapling-wasm/issues"
   },
   "publishConfig": {
     "access": "public"
   },
   "files": [
-    "/dist"
+    "dist",
+    "README.md"
   ],
   "main": "dist/index.node.js",
   "browser": "dist/index.browser.js",
   "types": "dist/index.d.ts",
-  "sourceMap": true,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "browser": "./dist/index.browser.js",
+      "default": "./dist/index.node.js"
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "build": "rm -rf dist && rm -rf pkg && npx webpack --mode=development && npm link ./dist",
-    "build:prod": "rm -rf dist && rm -rf pkg && npx webpack --mode=production"
+    "clean": "rimraf dist pkg",
+    "build": "npm run clean && npm run build:bundle && npm run build:types",
+    "build:bundle": "webpack --mode=production",
+    "build:types": "tsc --project tsconfig.types.json"
   }
 }

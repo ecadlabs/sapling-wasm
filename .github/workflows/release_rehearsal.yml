@@ -1,0 +1,75 @@
+name: Release Rehearsal
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Rehearsal version (for example 0.1.0-beta.0)
+        required: true
+        type: string
+      prerelease:
+        description: Rehearse prerelease publishing on the next dist-tag
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  rehearse:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ inputs.version }}
+      npm_config_cache: /tmp/sapling-wasm-npm-cache
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+
+      - run: npm ci
+
+      - name: Resolve release mode
+        run: |
+          set -euo pipefail
+          version_is_prerelease=false
+          if [[ "${VERSION}" == *-* ]]; then
+            version_is_prerelease=true
+          fi
+
+          if [[ "${{ inputs.prerelease }}" == "true" && "${version_is_prerelease}" != "true" ]]; then
+            echo "prerelease=true requires a prerelease version string" >&2
+            exit 1
+          fi
+
+          if [[ "${{ inputs.prerelease }}" != "true" && "${version_is_prerelease}" == "true" ]]; then
+            echo "prerelease=false is incompatible with a prerelease version string" >&2
+            exit 1
+          fi
+
+          if [[ "${version_is_prerelease}" == "true" ]]; then
+            echo "DIST_TAG=next" >> "$GITHUB_ENV"
+          else
+            echo "DIST_TAG=latest" >> "$GITHUB_ENV"
+          fi
+
+      - name: Set rehearsal version
+        run: node scripts/sync-workspace-version.js "${VERSION}"
+
+      - run: npm run build
+      - run: npm test
+
+      - name: Rehearse workspace publish
+        run: npm publish --workspaces --dry-run --tag "${DIST_TAG}" --access public

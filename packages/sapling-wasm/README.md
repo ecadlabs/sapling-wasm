@@ -1,23 +1,25 @@
-# AirGap Sapling Wasm
+# Sapling Wasm
 
-[![npm](https://img.shields.io/npm/v/@airgap/sapling-wasm.svg?colorB=brightgreen)](https://www.npmjs.com/package/@airgap/sapling-wasm)
+[![npm](https://img.shields.io/npm/v/@taquito/sapling-wasm.svg?colorB=brightgreen)](https://www.npmjs.com/package/@taquito/sapling-wasm)
 
-A Wasm wrapper around [Zcash Rust crates](https://github.com/zcash/librustzcash).
+A Wasm wrapper around [Zcash Rust crates](https://github.com/zcash/librustzcash), published as part of the Taquito package namespace.
+
+The published package name is `@taquito/sapling-wasm`.
 
 ## Install
 
-To add JS AirGap Sapling library into your project run:
+To add the JavaScript Sapling library into your project:
 
 ```bash
-$ npm install --save @airgap/sapling-wasm
+npm install --save @taquito/sapling-wasm
 ```
 
 ## Examples
 
 ```ts
 import * as bip39 from 'bip39'
-import * as sapling from '@airgap/sapling-wasm'
-import { SaplingPaymentAddress } from '@airgap/sapling-wasm'
+import * as sapling from '@taquito/sapling-wasm'
+import { SaplingPaymentAddress } from '@taquito/sapling-wasm'
 
 const mnemonic: string = bip39.generateMnemonic()
 const seed: Buffer = await bip39.mnemonicToSeed(mnemonic, '')
@@ -43,14 +45,6 @@ More advanced examples can be found in `./examples`.
 
 ## Development
 
-### Build
-
-To build a development version that links the library to examples run:
 ```bash
-$ npm run build
-```
-
-To build a production version run:
-```bash
-$ npm run build:prod
+npm run build
 ```

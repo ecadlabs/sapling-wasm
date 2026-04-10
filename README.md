@@ -1,35 +1,33 @@
-# AirGap Sapling
+# Sapling Wasm
 
-[![npm](https://img.shields.io/npm/v/@airgap/sapling-wasm.svg?colorB=brightgreen)](https://www.npmjs.com/package/@airgap/sapling-wasm)
-[![jitpack](https://img.shields.io/jitpack/v/github/airgap-it/airgap-sapling)](https://jitpack.io/#airgap-it/airgap-sapling)
-[![spm](https://img.shields.io/github/v/tag/airgap-it/airgap-sapling?include_prereleases&label=spm)](https://github.com/airgap-it/airgap-sapling/releases)
+[![npm](https://img.shields.io/npm/v/@taquito/sapling-wasm.svg?colorB=brightgreen)](https://www.npmjs.com/package/@taquito/sapling-wasm)
 
-Wasm, Android and iOS wrappers around [Zcash Rust crates](https://github.com/zcash/librustzcash).
+Sapling Wasm bindings around [Zcash Rust crates](https://github.com/zcash/librustzcash), maintained in the Taquito npm namespace from the ECAD fork.
 
 ## Project Overview
 
 The project is divided into the following packages:
-- `sapling` - common sources in Rust, provides C and Wasm bindings for [Zcash crates](https://github.com/zcash/librustzcash)
+- `sapling` - common sources in Rust, provides the Wasm bindings for [Zcash crates](https://github.com/zcash/librustzcash)
 - `sapling-wasm` - a JavaScript library using Wasm bindings from the `sapling` package
-- `sapling-android` - a native Android library using C bindings from the `sapling` package
-- `sapling-ios` - a native iOS library using C bindings from the `sapling` package
+
+The published npm package is `@taquito/sapling-wasm`. Repository ownership and maintenance live in the ECAD-managed fork at `ecadlabs/sapling-wasm`.
 
 ## Sapling Wasm
 
 ### Install
 
-To add JS AirGap Sapling library into your project run:
+To add the JavaScript Sapling library into your project:
 
 ```bash
-$ npm install --save @airgap/sapling-wasm
+npm install --save @taquito/sapling-wasm
 ```
 
 ### Examples
 
 ```ts
 import * as bip39 from 'bip39'
-import * as sapling from '@airgap/sapling-wasm'
-import { SaplingPaymentAddress } from '@airgap/sapling-wasm'
+import * as sapling from '@taquito/sapling-wasm'
+import { SaplingPaymentAddress } from '@taquito/sapling-wasm'
 
 const mnemonic: string = bip39.generateMnemonic()
 const seed: Buffer = await bip39.mnemonicToSeed(mnemonic, '')
@@ -53,49 +51,12 @@ console.log(
 
 More advanced examples can be found in `js/examples`.
 
-## Sapling Android
+## Development
 
-### Install
-
-To add Android AirGap Sapling library into your project:
-
-1. Ensure [Android NDK](https://developer.android.com/ndk) is supported in your project. 
-
-2. Add the [JitPack](https://jitpack.io/) repository to your root `build.gradle` file:
-  ```groovy
-  allprojects {
-    repositories {
-      ...
-      maven { url 'https://jitpack.io' }
-    }
-  }
-  ```
-
-1. Add the dependency:
-  ```groovy
-  def saplingVersion = "x.y.z"
-
-  implementation "com.github.airgap-it:airgap-sapling:$saplingVersion"
-  ```
-
-## Sapling iOS
-
-### Install
-
-To add iOS AirGap Sapling into your project, add the package dependency:
-
-#### Xcode
-
-Open the `Add Package Dependency` window (as described in [the official guide](https://developer.apple.com/documentation/xcode/adding_package_dependencies_to_your_app)) and enter the AirGap Sapling GitHub repository URL:
-```
-https://github.com/airgap-it/airgap-sapling
+```bash
+npm ci
+npm run build
+npm test
 ```
 
-#### Package.swift file
-
-Add the following dependency in your `Package.swift` file:
-
-```swift
-.package(url: "https://github.com/airgap-it/airgap-sapling", from: "x.y.z")
-```
-
+Release rehearsal and publish flows live in `.github/workflows/` and mirror the Taquito npm provenance pattern.

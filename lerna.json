@@ -1,6 +1,0 @@
-{
-  "packages": [
-    "packages/sapling-wasm"
-  ],
-  "version": "0.0.10"
-}

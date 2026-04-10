@@ -1,20 +1,17 @@
 const WasmPackPlugin = require('@wasm-tool/wasm-pack-plugin')
-const CopyWebpackPlugin = require('copy-webpack-plugin')
 const path = require('path')
 
 const WasmPreloadPlugin = require('./plugins/WasmPreloadPlugin')
 const WebpackPatchPlugin = require('./plugins/WebpackPatchPlugin')
 
-const nodeModules = path.resolve(__dirname, 'node_modules')
-const packageJson = path.resolve(__dirname, 'package.json')
 const dist = path.resolve(__dirname, 'dist')
 
-const commonConfig = {
+module.exports = {
   entry: {
     browser: path.resolve(__dirname, 'src/index.ts'),
     node: path.resolve(__dirname, 'src/index.ts')
   },
-  devtool: 'inline-source-map',
+  devtool: 'source-map',
   target: ['es2020', 'node'],
   output: {
     path: dist,
@@ -22,17 +19,14 @@ const commonConfig = {
     libraryTarget: 'commonjs'
   },
   resolve: {
-    extensions: ['.js', '.ts', '.wasm'],
-    modules: [nodeModules],
-    descriptionFiles: [packageJson],
-    symlinks: false
+    extensions: ['.js', '.ts', '.wasm']
   },
   module: {
     rules: [
-      { 
-        test: /\.ts$/, 
+      {
+        test: /\.ts$/,
         loader: 'ts-loader',
-        exclude: nodeModules
+        exclude: /node_modules/
       }
     ],
     exprContextCritical: false
@@ -55,30 +49,4 @@ const commonConfig = {
   experiments: {
     asyncWebAssembly: true
   }
-}
-
-const prodConfig = commonConfig
-
-const devConfig = {
-  ...commonConfig,
-  plugins: [
-    ...commonConfig.plugins,
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: packageJson,
-          to: dist,
-          transform(content) {
-            return content.toString()
-              .replace(/\/dist/g, ".")
-              .replace(/dist\//g, "")
-          }
-        }
-      ]
-    })
-  ]
-}
-
-module.exports = (env, argv) => {
-  return (argv.mode === 'development') ? devConfig : prodConfig
 }

@@ -1,7 +1,10 @@
 [package]
 name = "airgap_sapling"
-version = "0.0.10"
-authors = ["Papers.ch <contact@papers.ch>"]
+version = "0.1.0-alpha.0"
+authors = ["ECAD Labs Inc <info@ecadlabs.com>", "Papers.ch <contact@papers.ch>"]
+description = "Sapling cryptography bindings for the @taquito/sapling-wasm package."
+repository = "https://github.com/ecadlabs/sapling-wasm"
+license = "MIT"
 edition = "2018"
 
 [lib]
