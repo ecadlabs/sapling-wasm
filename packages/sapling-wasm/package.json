@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Sapling Wasm bindings for Taquito and compatible consumers.",
   "author": "ECAD Labs Inc <info@ecadlabs.com>",
+  "license": "MIT",
   "homepage": "https://github.com/ecadlabs/sapling-wasm",
   "repository": {
     "type": "git",
