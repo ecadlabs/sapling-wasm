@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/@taquito/sapling-wasm.svg?colorB=brightgreen)](https://www.npmjs.com/package/@taquito/sapling-wasm)
 
-Sapling Wasm bindings around [Zcash Rust crates](https://github.com/zcash/librustzcash), maintained in the Taquito npm namespace from the ECAD fork.
+Sapling Wasm bindings around [Zcash Rust crates](https://github.com/zcash/librustzcash), maintained in the Taquito npm namespace from the ECAD-managed fork of [airgap-it/airgap-sapling](https://github.com/airgap-it/airgap-sapling).
 
 ## Project Overview
 
@@ -11,6 +11,12 @@ The project is divided into the following packages:
 - `sapling-wasm` - a JavaScript library using Wasm bindings from the `sapling` package
 
 The published npm package is `@taquito/sapling-wasm`. Repository ownership and maintenance live in the ECAD-managed fork at `ecadlabs/sapling-wasm`.
+
+This repository was forked from the work of the AirGap team. We are grateful to the people behind `airgap-it/airgap-sapling` for the original implementation and foundation.
+
+Stable releases are published from GitHub Actions with npm provenance enabled. The bootstrap prerelease `0.1.0-alpha.0` was created manually so the package could be registered and connected to npm trusted publishing.
+
+The repository is distributed under the MIT license. See [LICENSE](./LICENSE).
 
 ## Sapling Wasm
 

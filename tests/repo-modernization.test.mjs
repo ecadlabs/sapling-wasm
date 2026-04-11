@@ -57,7 +57,8 @@ test('repo uses a workspace-based JS toolchain and GitHub npm release flow', () 
 
   assert.deepEqual(rootPackageJson.workspaces, ['packages/sapling-wasm']);
   assert.match(rootPackageJson.scripts.build, /npm run -w @taquito\/sapling-wasm build/);
-  assert.match(rootPackageJson.scripts.test, /node --test/);
+  assert.match(rootPackageJson.scripts.test, /npm run test:repo && npm run test:rust/);
+  assert.match(rootPackageJson.scripts['test:repo'], /npm run build && node --test/);
 
   const ciWorkflow = readText('.github/workflows/main.yml');
   assert.match(ciWorkflow, /branches:\s*\n\s*-\s*main/);

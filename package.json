@@ -4,6 +4,7 @@
   "description": "Sapling Wasm workspace for Taquito and compatible consumers.",
   "private": true,
   "author": "ECAD Labs Inc <info@ecadlabs.com>",
+  "license": "MIT",
   "contributors": [
     "Papers.ch <contact@papers.ch>",
     "Jev Bjorsell <jev@ecadlabs.com>"
@@ -26,9 +27,11 @@
   "scripts": {
     "clean": "rimraf node_modules packages/sapling-wasm/node_modules packages/sapling-wasm/dist packages/sapling-wasm/pkg",
     "build": "npm run -w @taquito/sapling-wasm build",
-    "test": "node --test tests/*.test.mjs && cargo test --manifest-path packages/sapling/Cargo.toml",
-    "test:repo": "node --test tests/*.test.mjs",
-    "test:rust": "cargo test --manifest-path packages/sapling/Cargo.toml",
+    "test": "npm run test:repo && npm run test:rust",
+    "test:repo": "npm run build && node --test tests/*.test.mjs",
+    "test:rust": "cargo test --manifest-path packages/sapling/Cargo.toml && npm run test:rust:warnings && npm run test:rust:wasm-warnings",
+    "test:rust:warnings": "RUSTFLAGS='-D warnings' cargo test --manifest-path packages/sapling/Cargo.toml --quiet",
+    "test:rust:wasm-warnings": "RUSTFLAGS='-D warnings' cargo check --manifest-path packages/sapling/Cargo.toml --features wasm_bindings --quiet",
     "version:check": "node scripts/sync-workspace-version.js --check",
     "version:sync": "node scripts/sync-workspace-version.js"
   },
