@@ -1,6 +1,6 @@
 {
   "name": "sapling-wasm",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Sapling Wasm workspace for Taquito and compatible consumers.",
   "private": true,
   "author": "ECAD Labs Inc <info@ecadlabs.com>",
