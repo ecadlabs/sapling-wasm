@@ -4,6 +4,7 @@
     "outDir": "./dist",
     "declaration": true,
     "emitDeclarationOnly": true,
+    "module": "es2022",
     "noEmit": false,
     "sourceMap": false
   }

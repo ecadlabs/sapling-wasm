@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 
 const repoRoot = new URL('../', import.meta.url);
@@ -48,8 +49,50 @@ test('sapling-wasm keeps the current runtime export surface', () => {
   const packageJson = readJson('packages/sapling-wasm/package.json');
   assert.equal(packageJson.name, '@taquito/sapling-wasm');
   assert.equal(packageJson.main, 'dist/index.node.js');
-  assert.equal(packageJson.browser, 'dist/index.browser.js');
+  assert.equal(packageJson.module, 'dist/browser/index.js');
+  assert.equal(packageJson.browser, 'dist/browser/index.js');
   assert.equal(packageJson.types, 'dist/index.d.ts');
+});
+
+test('published package exposes a native ESM browser entry and ships the wasm asset', () => {
+  const packageJson = readJson('packages/sapling-wasm/package.json');
+
+  assert.deepEqual(packageJson.files, ['dist', 'pkg', 'pkg-web', 'README.md']);
+  assert.deepEqual(packageJson.exports['.'], {
+    types: './dist/index.d.ts',
+    browser: './dist/browser/index.js',
+    node: './dist/index.node.js',
+    import: './dist/browser/index.js',
+    require: './dist/index.node.js',
+    default: './dist/browser/index.js'
+  });
+
+  const browserEntry = readText('packages/sapling-wasm/dist/browser/index.js');
+
+  assert.match(browserEntry, /^export \* from ['"]\.\.\/types['"];/m);
+  assert.doesNotMatch(browserEntry, /\bmodule\.exports\b/);
+  assert.doesNotMatch(browserEntry, /\brequire\(/);
+  assert.doesNotMatch(browserEntry, /__webpack_require__/);
+
+  assert.equal(existsSync(new URL('packages/sapling-wasm/pkg/index_bg.wasm', repoRoot)), true);
+  assert.equal(existsSync(new URL('packages/sapling-wasm/pkg-web/index_bg.wasm', repoRoot)), true);
+});
+
+test('npm pack includes both wasm-pack payload directories', () => {
+  const packOutput = execFileSync(
+    'npm',
+    ['pack', '--dry-run', '--json'],
+    {
+      cwd: new URL('packages/sapling-wasm/', repoRoot),
+      encoding: 'utf8',
+    }
+  );
+  const [{ files }] = JSON.parse(packOutput);
+  const packedPaths = files.map(({ path }) => path);
+
+  assert.match(packedPaths.join('\n'), /pkg\/index_bg\.wasm/);
+  assert.match(packedPaths.join('\n'), /pkg-web\/index\.js/);
+  assert.match(packedPaths.join('\n'), /pkg-web\/index_bg\.wasm/);
 });
 
 test('repo uses a workspace-based JS toolchain and GitHub npm release flow', () => {

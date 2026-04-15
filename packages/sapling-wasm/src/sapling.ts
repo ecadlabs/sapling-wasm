@@ -31,7 +31,7 @@ import {
 } from './types'
 
 let isInitialized: boolean = false
-const saplingPromise: Promise<WasmSapling> = import('../pkg')
+const saplingPromise: Promise<WasmSapling> = import('../pkg/index.js')
   .catch((error) => {
     console.error(error)
     throw new Error(`Could not load sapling-wasm: ${error}`)

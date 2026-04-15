@@ -8,7 +8,6 @@ const dist = path.resolve(__dirname, 'dist')
 
 module.exports = {
   entry: {
-    browser: path.resolve(__dirname, 'src/index.ts'),
     node: path.resolve(__dirname, 'src/index.ts')
   },
   devtool: 'source-map',
@@ -26,6 +25,9 @@ module.exports = {
       {
         test: /\.ts$/,
         loader: 'ts-loader',
+        options: {
+          configFile: path.resolve(__dirname, 'tsconfig.node.json')
+        },
         exclude: /node_modules/
       }
     ],
@@ -40,7 +42,7 @@ module.exports = {
       extraArgs: '--target bundler --mode normal -- --features wasm_bindings'
     }),
     new WasmPreloadPlugin({
-      targetFiles: ['index.browser.js', 'index.node.js']
+      targetFiles: ['index.node.js']
     }),
     new WebpackPatchPlugin({
         targetFiles: ['index.node.js']

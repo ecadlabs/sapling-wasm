@@ -1,6 +1,6 @@
 {
   "name": "@taquito/sapling-wasm",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Sapling Wasm bindings for Taquito and compatible consumers.",
   "author": "ECAD Labs Inc <info@ecadlabs.com>",
   "license": "MIT",
@@ -18,25 +18,34 @@
   },
   "files": [
     "dist",
+    "pkg",
+    "pkg-web",
     "README.md"
   ],
   "main": "dist/index.node.js",
-  "browser": "dist/index.browser.js",
+  "module": "dist/browser/index.js",
+  "browser": "dist/browser/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "browser": "./dist/index.browser.js",
-      "default": "./dist/index.node.js"
+      "browser": "./dist/browser/index.js",
+      "node": "./dist/index.node.js",
+      "import": "./dist/browser/index.js",
+      "require": "./dist/index.node.js",
+      "default": "./dist/browser/index.js"
     }
   },
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "clean": "rimraf dist pkg",
-    "build": "npm run clean && npm run build:bundle && npm run build:types",
+    "clean": "rimraf dist pkg pkg-web",
+    "build": "npm run clean && npm run build:bundle && npm run build:browser:wasm && npm run normalize:wasm-pack-output && npm run build:browser && npm run build:types",
     "build:bundle": "webpack --mode=production",
-    "build:types": "tsc --project tsconfig.types.json"
+    "build:browser:wasm": "wasm-pack build ../sapling --target web --out-dir ../sapling-wasm/pkg-web --out-name index --release -- --features wasm_bindings",
+    "build:browser": "tsc --project tsconfig.browser.json",
+    "build:types": "tsc --project tsconfig.types.json",
+    "normalize:wasm-pack-output": "rimraf pkg/.gitignore pkg-web/.gitignore"
   }
 }
