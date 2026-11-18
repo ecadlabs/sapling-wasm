@@ -1,13 +1,13 @@
 import { WasmSapling } from './types'
-import { bufferFrom } from './utils'
+import { bytesFrom } from './utils'
 
 export function __wasm__initParameters(
   sapling: WasmSapling,
-  spendParams: Buffer | Uint8Array | string,
-  outputParams: Buffer | Uint8Array | string
-) {
-  const spendParamsBuffer: Buffer = bufferFrom(spendParams, 'spendParams', '`Buffer`, `Uint8Array` or hex string')
-  const outputParamsBuffer: Buffer = bufferFrom(outputParams, 'outputParams', '`Buffer`, `Uint8Array` or hex string')
+  spendParams: Uint8Array | string,
+  outputParams: Uint8Array | string
+): void {
+  const spendParamsBytes: Uint8Array = bytesFrom(spendParams, 'spendParams', '`Uint8Array` or hex string')
+  const outputParamsBytes: Uint8Array = bytesFrom(outputParams, 'outputParams', '`Uint8Array` or hex string')
 
-  sapling.initParams(spendParamsBuffer, outputParamsBuffer)
+  sapling.initParams(spendParamsBytes, outputParamsBytes)
 }

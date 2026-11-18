@@ -1,9 +1,8 @@
 use std::convert::TryInto;
 
 use wasm_bindgen::prelude::*;
-use zcash_proofs::sapling::SaplingProvingContext;
 
-use crate::common::utils::wasm_utils::{js_dereference, js_result_from, js_serialize_res};
+use crate::common::utils::wasm_utils::{js_result_from, js_serialize_res, with_proving_context};
 use crate::transaction::create_binding_sig;
 use crate::wasm_bindings::init::wasm_init_lib;
 
@@ -15,7 +14,6 @@ pub fn wasm_binding_signature(
 ) -> Result<Vec<u8>, JsValue> {
     wasm_init_lib();
 
-    let ctx: &mut SaplingProvingContext = unsafe { js_dereference(ctx) };
     let sighash: [u8; 32] = sighash
         .try_into()
         .or_else(|_| js_result_from("bindingSignature: sighash must be an array of 32 bytes"))?;
@@ -23,7 +21,9 @@ pub fn wasm_binding_signature(
         .parse()
         .or_else(|_| js_result_from("bindingSignature: invalid value_balance"))?;
 
-    let binding_sig = create_binding_sig(ctx, value_balance, sighash);
+    with_proving_context(ctx, |ctx| {
+        let binding_sig = create_binding_sig(ctx, value_balance, sighash);
 
-    js_serialize_res(binding_sig)
+        js_serialize_res(binding_sig)
+    })
 }

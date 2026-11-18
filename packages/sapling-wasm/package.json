@@ -1,6 +1,6 @@
 {
   "name": "@taquito/sapling-wasm",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Sapling Wasm bindings for Taquito and compatible consumers.",
   "author": "ECAD Labs Inc <info@ecadlabs.com>",
   "license": "MIT",
@@ -41,9 +41,10 @@
   },
   "scripts": {
     "clean": "rimraf dist pkg pkg-web",
-    "build": "npm run clean && npm run build:bundle && npm run build:browser:wasm && npm run normalize:wasm-pack-output && npm run build:browser && npm run build:types",
-    "build:bundle": "webpack --mode=production",
-    "build:browser:wasm": "wasm-pack build ../sapling --target web --out-dir ../sapling-wasm/pkg-web --out-name index --release -- --features wasm_bindings",
+    "build": "npm run clean && npm run build:node:wasm && npm run build:browser:wasm && npm run normalize:wasm-pack-output && npm run build:node && npm run build:browser && npm run build:types",
+    "build:node:wasm": "wasm-pack build ../sapling --target nodejs --out-dir ../sapling-wasm/pkg --out-name index --release -- --locked --features wasm_bindings",
+    "build:browser:wasm": "wasm-pack build ../sapling --target web --out-dir ../sapling-wasm/pkg-web --out-name index --release -- --locked --features wasm_bindings",
+    "build:node": "tsc --project tsconfig.node.json && node ../../scripts/finalize-node-build.js",
     "build:browser": "tsc --project tsconfig.browser.json",
     "build:types": "tsc --project tsconfig.types.json",
     "normalize:wasm-pack-output": "rimraf pkg/.gitignore pkg-web/.gitignore"

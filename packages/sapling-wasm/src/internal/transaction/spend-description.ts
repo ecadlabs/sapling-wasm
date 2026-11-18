@@ -2,42 +2,40 @@ import { SaplingPaymentAddress, SaplingSpendDescription, SaplingUnsignedSpendDes
 
 import { WasmSapling } from '../types'
 import { isPaymentAddress } from '../address/payment-address'
-import { stringFrom, bufferFrom } from '../utils'
+import { bytesFrom, concatBytes, stringFrom } from '../utils'
 
 export function __wasm__spendDescriptionFromXsk(
   sapling: WasmSapling,
   context: number,
-  xsk: Buffer | Uint8Array | string,
-  address: SaplingPaymentAddress | Buffer | Uint8Array | string,
-  rcm: Buffer | Uint8Array | string,
-  ar: Buffer | Uint8Array | string,
-  value: string | number | BigInt,
-  anchor: Buffer | Uint8Array | string,
-  merklePath: Buffer | Uint8Array | string
+  xsk: Uint8Array | string,
+  address: SaplingPaymentAddress | Uint8Array | string,
+  rcm: Uint8Array | string,
+  ar: Uint8Array | string,
+  value: string | number | bigint,
+  anchor: Uint8Array | string,
+  merklePath: Uint8Array | string
 ): SaplingUnsignedSpendDescription {
-  const xskBuffer: Buffer = bufferFrom(xsk, 'spendingKey', '`Buffer`, `Uint8Array` or hex string')
-  const addressBuffer: Buffer = bufferFrom(
+  const xskBytes: Uint8Array = bytesFrom(xsk, 'spendingKey', '`Uint8Array` or hex string')
+  const addressBytes: Uint8Array = bytesFrom(
     isPaymentAddress(address) ? address.raw : address,
     'address',
-    '`SaplingPaymentAddress`, `Buffer`, `Uint8Array` or hex string'
+    '`SaplingPaymentAddress`, `Uint8Array` or hex string'
   )
-  const rcmBuffer: Buffer = bufferFrom(rcm, 'rcm', '`Buffer`, `Uint8Array` or hex string')
-  const arBuffer: Buffer = bufferFrom(ar, 'ar', '`Buffer`, `Uint8Array` or hex string')
-  const valueString: string = stringFrom(value, 'value', '`number` `BigInt` or `string`')
-  const anchorBuffer: Buffer = bufferFrom(anchor, 'anchor', '`Buffer`, `Uint8Array` or hex string')
-  const merklePathBuffer: Buffer = bufferFrom(merklePath, 'merklePath', '`Buffer`, `Uint8Array` or hex string')
+  const rcmBytes: Uint8Array = bytesFrom(rcm, 'rcm', '`Uint8Array` or hex string')
+  const arBytes: Uint8Array = bytesFrom(ar, 'ar', '`Uint8Array` or hex string')
+  const valueString: string = stringFrom(value, 'value', '`number`, `bigint` or `string`')
+  const anchorBytes: Uint8Array = bytesFrom(anchor, 'anchor', '`Uint8Array` or hex string')
+  const merklePathBytes: Uint8Array = bytesFrom(merklePath, 'merklePath', '`Uint8Array` or hex string')
 
-  const spendDescription = Buffer.from(
-    sapling.spendDescriptionFromXsk(
-      context,
-      xskBuffer,
-      addressBuffer,
-      rcmBuffer,
-      arBuffer,
-      valueString,
-      anchorBuffer,
-      merklePathBuffer
-    )
+  const spendDescription: Uint8Array = sapling.spendDescriptionFromXsk(
+    context,
+    xskBytes,
+    addressBytes,
+    rcmBytes,
+    arBytes,
+    valueString,
+    anchorBytes,
+    merklePathBytes
   )
 
   return {
@@ -52,37 +50,35 @@ export function __wasm__spendDescriptionFromXsk(
 export function __wasm__spendDescriptionFromPak(
   sapling: WasmSapling,
   context: number,
-  pak: Buffer | Uint8Array | string,
-  address: SaplingPaymentAddress | Buffer | Uint8Array | string,
-  rcm: Buffer | Uint8Array | string,
-  ar: Buffer | Uint8Array | string,
-  value: string | number | BigInt,
-  anchor: Buffer | Uint8Array | string,
-  merklePath: Buffer | Uint8Array | string
+  pak: Uint8Array | string,
+  address: SaplingPaymentAddress | Uint8Array | string,
+  rcm: Uint8Array | string,
+  ar: Uint8Array | string,
+  value: string | number | bigint,
+  anchor: Uint8Array | string,
+  merklePath: Uint8Array | string
 ): SaplingUnsignedSpendDescription {
-  const pakBuffer: Buffer = bufferFrom(pak, 'authorizingKey', '`Buffer`, `Uint8Array` or hex string')
-  const addressBuffer: Buffer = bufferFrom(
+  const pakBytes: Uint8Array = bytesFrom(pak, 'authorizingKey', '`Uint8Array` or hex string')
+  const addressBytes: Uint8Array = bytesFrom(
     isPaymentAddress(address) ? address.raw : address,
     'address',
-    '`SaplingPaymentAddress`, `Buffer`, `Uint8Array` or hex string'
+    '`SaplingPaymentAddress`, `Uint8Array` or hex string'
   )
-  const rcmBuffer: Buffer = bufferFrom(rcm, 'rcm', '`Buffer`, `Uint8Array` or hex string')
-  const arBuffer: Buffer = bufferFrom(ar, 'ar', '`Buffer`, `Uint8Array` or hex string')
-  const valueString: string = stringFrom(value, 'value', '`number` `BigInt` or `string`')
-  const anchorBuffer: Buffer = bufferFrom(anchor, 'anchor', '`Buffer`, `Uint8Array` or hex string')
-  const merklePathBuffer: Buffer = bufferFrom(merklePath, 'merklePath', '`Buffer`, `Uint8Array` or hex string')
+  const rcmBytes: Uint8Array = bytesFrom(rcm, 'rcm', '`Uint8Array` or hex string')
+  const arBytes: Uint8Array = bytesFrom(ar, 'ar', '`Uint8Array` or hex string')
+  const valueString: string = stringFrom(value, 'value', '`number`, `bigint` or `string`')
+  const anchorBytes: Uint8Array = bytesFrom(anchor, 'anchor', '`Uint8Array` or hex string')
+  const merklePathBytes: Uint8Array = bytesFrom(merklePath, 'merklePath', '`Uint8Array` or hex string')
 
-  const spendDescription = Buffer.from(
-    sapling.spendDescriptionFromPak(
-      context,
-      pakBuffer,
-      addressBuffer,
-      rcmBuffer,
-      arBuffer,
-      valueString,
-      anchorBuffer,
-      merklePathBuffer
-    )
+  const spendDescription: Uint8Array = sapling.spendDescriptionFromPak(
+    context,
+    pakBytes,
+    addressBytes,
+    rcmBytes,
+    arBytes,
+    valueString,
+    anchorBytes,
+    merklePathBytes
   )
 
   return {
@@ -97,16 +93,27 @@ export function __wasm__spendDescriptionFromPak(
 export function __wasm__signSpendDescriptionWithXsk(
   sapling: WasmSapling,
   description: SaplingUnsignedSpendDescription,
-  xsk: Buffer | Uint8Array | string,
-  ar: Buffer | Uint8Array | string,
-  sighash: Buffer | Uint8Array | string
+  xsk: Uint8Array | string,
+  ar: Uint8Array | string,
+  sighash: Uint8Array | string
 ): SaplingSpendDescription {
-  const descriptionBuffer: Buffer = Buffer.concat([description.cv, description.rt, description.nf, description.rk, description.proof])
-  const xskBuffer: Buffer = bufferFrom(xsk, 'spendingKey', '`Buffer`, `Uint8Array` or hex string')
-  const arBuffer: Buffer = bufferFrom(ar, 'ar', '`Buffer`, `Uint8Array` or hex string')
-  const sighashBuffer: Buffer = bufferFrom(sighash, 'sighash', '`Buffer`, `Uint8Array` or hex string')
+  const descriptionBytes: Uint8Array = concatBytes([
+    description.cv,
+    description.rt,
+    description.nf,
+    description.rk,
+    description.proof
+  ])
+  const xskBytes: Uint8Array = bytesFrom(xsk, 'spendingKey', '`Uint8Array` or hex string')
+  const arBytes: Uint8Array = bytesFrom(ar, 'ar', '`Uint8Array` or hex string')
+  const sighashBytes: Uint8Array = bytesFrom(sighash, 'sighash', '`Uint8Array` or hex string')
 
-  const signedDescription: Buffer = Buffer.from(sapling.signSpendDescriptionWithXsk(descriptionBuffer, xskBuffer, arBuffer, sighashBuffer))
+  const signedDescription: Uint8Array = sapling.signSpendDescriptionWithXsk(
+    descriptionBytes,
+    xskBytes,
+    arBytes,
+    sighashBytes
+  )
 
   return {
     cv: signedDescription.slice(0, 32) /* 32 bytes */,

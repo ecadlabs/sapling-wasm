@@ -1,24 +1,23 @@
 import { SaplingPaymentAddress } from '../../types'
 import { WasmSapling } from '../types'
 
-import { bufferFrom, bufferFromOfLength } from '../utils'
+import { bytesFrom, bytesFromOfLength, isUint8Array } from '../utils'
 
 export function getAddressFromXfvk(
   sapling: WasmSapling,
-  xfvk: Buffer | Uint8Array | string,
-  index: Buffer | Uint8Array | string | number | undefined
+  xfvk: Uint8Array | string,
+  index: Uint8Array | string | number | undefined
 ): SaplingPaymentAddress {
-  const xfvkBuffer: Buffer = bufferFrom(xfvk, 'viewingKey', '`Buffer`, `Uint8Array` or hex string')
-  const indexBuffer: Buffer | undefined =
+  const xfvkBytes: Uint8Array = bytesFrom(xfvk, 'viewingKey', '`Uint8Array` or hex string')
+  const indexBytes: Uint8Array | undefined =
     index !== undefined
-      ? bufferFromOfLength(index, 11, 'index', '`Buffer`, `Uint8Array` or hex string').reverse() // LE
+      ? bytesFromOfLength(index, 11, 'index', '`Uint8Array` or hex string').reverse() // LE
       : undefined
 
-  const address = Buffer.from(
-    indexBuffer !== undefined
-      ? sapling.paymentAddressFromXfvk(xfvkBuffer, indexBuffer)
-      : sapling.defaultPaymentAddressFromXfvk(xfvkBuffer)
-  )
+  const address: Uint8Array =
+    indexBytes !== undefined
+      ? sapling.paymentAddressFromXfvk(xfvkBytes, indexBytes)
+      : sapling.defaultPaymentAddressFromXfvk(xfvkBytes)
 
   return {
     index: address.slice(0, 11),
@@ -28,13 +27,13 @@ export function getAddressFromXfvk(
 
 export function getNextAddressFromXfvk(
   sapling: WasmSapling,
-  xfvk: Buffer | Uint8Array | string,
-  index: Buffer | Uint8Array | string | number
+  xfvk: Uint8Array | string,
+  index: Uint8Array | string | number
 ): SaplingPaymentAddress {
-  const xfvkBuffer: Buffer = bufferFrom(xfvk, 'viewingKey', '`Buffer`, `Uint8Array` or hex string')
-  const indexBuffer: Buffer = bufferFromOfLength(index, 11, 'index', '`Buffer`, `Uint8Array` or hex string').reverse() // LE
+  const xfvkBytes: Uint8Array = bytesFrom(xfvk, 'viewingKey', '`Uint8Array` or hex string')
+  const indexBytes: Uint8Array = bytesFromOfLength(index, 11, 'index', '`Uint8Array` or hex string').reverse() // LE
 
-  const address: Buffer = Buffer.from(sapling.nextPaymentAddressFromXfvk(xfvkBuffer, indexBuffer))
+  const address: Uint8Array = sapling.nextPaymentAddressFromXfvk(xfvkBytes, indexBytes)
 
   return {
     index: address.slice(0, 11),
@@ -43,28 +42,35 @@ export function getNextAddressFromXfvk(
 }
 
 export function isPaymentAddress(address: unknown): address is SaplingPaymentAddress {
-  return address instanceof Object && (address as any).index !== undefined && (address as any).raw !== undefined
+  return (
+    typeof address === 'object' &&
+    address !== null &&
+    'index' in address &&
+    isUint8Array(address.index) &&
+    'raw' in address &&
+    isUint8Array(address.raw)
+  )
 }
 
 export function getRawAddressFromIvk(
-  sapling: WasmSapling, 
-  ivk: Buffer | Uint8Array | string, 
-  diversifier: Buffer | Uint8Array | string
-): Buffer {
-  const ivkBuffer: Buffer = bufferFrom(ivk, 'ivk', '`Buffer`, `Uint8Array`, or hex string')
-  const diversifierBuffer: Buffer = bufferFrom(diversifier, 'ivk', '`Buffer`, `Uint8Array`, or hex string')
+  sapling: WasmSapling,
+  ivk: Uint8Array | string,
+  diversifier: Uint8Array | string
+): Uint8Array {
+  const ivkBytes: Uint8Array = bytesFrom(ivk, 'ivk', '`Uint8Array` or hex string')
+  const diversifierBytes: Uint8Array = bytesFrom(diversifier, 'diversifier', '`Uint8Array` or hex string')
 
-  return Buffer.from(sapling.paymentAddressFromIvk(ivkBuffer, diversifierBuffer))
+  return sapling.paymentAddressFromIvk(ivkBytes, diversifierBytes)
 }
 
-export function getDiversifierFromRawAddress(sapling: WasmSapling, address: Buffer | Uint8Array | string): Buffer {
-  const addressBuffer: Buffer = bufferFrom(address, 'address', '`Buffer`, `Uint8Array` or hex string')
+export function getDiversifierFromRawAddress(sapling: WasmSapling, address: Uint8Array | string): Uint8Array {
+  const addressBytes: Uint8Array = bytesFrom(address, 'address', '`Uint8Array` or hex string')
 
-  return Buffer.from(sapling.diversifierFromPaymentAddress(addressBuffer))
+  return sapling.diversifierFromPaymentAddress(addressBytes)
 }
 
-export function getPkdFromRawAddress(sapling: WasmSapling, address: Buffer | Uint8Array | string): Buffer {
-  const addressBuffer: Buffer = bufferFrom(address, 'address', '`Buffer`, `Uint8Array` or hex string')
+export function getPkdFromRawAddress(sapling: WasmSapling, address: Uint8Array | string): Uint8Array {
+  const addressBytes: Uint8Array = bytesFrom(address, 'address', '`Uint8Array` or hex string')
 
-  return Buffer.from(sapling.pkdFromPaymentAddress(addressBuffer))
+  return sapling.pkdFromPaymentAddress(addressBytes)
 }

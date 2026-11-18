@@ -1,20 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
 
 const require = createRequire(import.meta.url);
+const wasmPkg = require(fileURLToPath(new URL('../packages/sapling-wasm/pkg/index.js', import.meta.url)));
 const sapling = require(fileURLToPath(new URL('../packages/sapling-wasm/dist/index.node.js', import.meta.url)));
 
-const seed0123 = Buffer.from([...Array(32).keys()]);
+const seed0123 = Uint8Array.from({ length: 32 }, (_, index) => index);
 
-function reverseHexBytes(hex) {
-  const bytes = Buffer.from(hex, 'hex');
-  return Buffer.from(bytes.reverse());
+function bytesToHex(bytes) {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 function hexBytes(hex) {
-  return Buffer.from(hex, 'hex');
+  const normalized = hex.startsWith('0x') ? hex.slice(2) : hex;
+  const out = new Uint8Array(normalized.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    out[i] = Number.parseInt(normalized.slice(i * 2, i * 2 + 2), 16);
+  }
+  return out;
+}
+
+function reverseHexBytes(hex) {
+  return hexBytes(hex).reverse();
+}
+
+function assertPureUint8Array(value, label) {
+  assert.equal(value instanceof Uint8Array, true, `${label} should be a Uint8Array`);
+  assert.equal(Buffer.isBuffer(value), false, `${label} should not be a Node Buffer`);
 }
 
 function octezCommitments() {
@@ -71,7 +89,7 @@ async function octezUncommittedNodes(depth) {
 
 async function octezRootFromLeaves(depth, leaves) {
   const defaults = await octezUncommittedNodes(depth);
-  let levelNodes = Array.from({ length: 1 << depth }, () => Buffer.from(defaults[0]));
+  let levelNodes = Array.from({ length: 1 << depth }, () => new Uint8Array(defaults[0]));
 
   for (let index = 0; index < leaves.length; index++) {
     levelNodes[index] = leaves[index];
@@ -116,20 +134,30 @@ test('built Node package preserves key derivation outputs', async () => {
   const xsk = await sapling.getExtendedSpendingKey(seed0123, path);
   const xfvk = await sapling.getExtendedFullViewingKey(seed0123, path);
   const xfvkFromXsk = await sapling.getExtendedFullViewingKeyFromSpendingKey(xsk);
+  const pak = await sapling.getProofAuthorizingKey(xsk);
   const ovk = await sapling.getOutgoingViewingKey(xfvk);
   const ivk = await sapling.getIncomingViewingKey(xfvk);
+  const randomScalar = await sapling.randR();
+
+  assertPureUint8Array(xsk, 'xsk');
+  assertPureUint8Array(xfvk, 'xfvk');
+  assertPureUint8Array(xfvkFromXsk, 'xfvkFromXsk');
+  assertPureUint8Array(pak, 'pak');
+  assertPureUint8Array(ovk, 'ovk');
+  assertPureUint8Array(ivk, 'ivk');
+  assertPureUint8Array(randomScalar, 'randR');
 
   assert.equal(
-    xsk.toString('hex'),
+    bytesToHex(xsk),
     '02db999e070200008097ce15f4ed1b9739b0262a463bcb3dc9b3bd2323a9baa441ca42777383a8d4358be8113cee3413a71f82c41fc8da517be134049832e6825c92da6b84fee4c60d3778059dc569e7d0d32391573f951bbde92fc6b9cf614773661c5c273aa6990ccf81182e96223c028ce3d6eb4794d3113b95069d14c57588e193b65efc2813bca3eda19f9eff46ca12dfa1bf10371b48d1b4a40c4d05a0d8dce0e7dc62b07b37'
   );
   assert.equal(
-    xfvk.toString('hex'),
+    bytesToHex(xfvk),
     '02db999e070200008097ce15f4ed1b9739b0262a463bcb3dc9b3bd2323a9baa441ca42777383a8d435a6c5925a0f85fa4f1e405e3a4970d0c4a4b4814438f4e9d4520e20f7fdcf3841304e305916216beb7b654d8aae50ecd188fcb384bc36c00c664f307725e2ee11cf81182e96223c028ce3d6eb4794d3113b95069d14c57588e193b65efc2813bca3eda19f9eff46ca12dfa1bf10371b48d1b4a40c4d05a0d8dce0e7dc62b07b37'
   );
-  assert.equal(xfvkFromXsk.toString('hex'), xfvk.toString('hex'));
-  assert.equal(ovk.toString('hex'), 'cf81182e96223c028ce3d6eb4794d3113b95069d14c57588e193b65efc2813bc');
-  assert.equal(ivk.toString('hex'), 'a2a13c1e38b45984445803e430a683c90bb2e14d4c8692ff253a6484dd9bb504');
+  assert.equal(bytesToHex(xfvkFromXsk), bytesToHex(xfvk));
+  assert.equal(bytesToHex(ovk), 'cf81182e96223c028ce3d6eb4794d3113b95069d14c57588e193b65efc2813bc');
+  assert.equal(bytesToHex(ivk), 'a2a13c1e38b45984445803e430a683c90bb2e14d4c8692ff253a6484dd9bb504');
 });
 
 test('built Node package preserves address derivation outputs', async () => {
@@ -137,7 +165,9 @@ test('built Node package preserves address derivation outputs', async () => {
   // https://raw.githubusercontent.com/zcash/zcash-test-vectors/master/test-vectors/json/sapling_zip32.json
   const xfvk = await sapling.getExtendedFullViewingKey(seed0123, 'm/1/2h');
   const address = await sapling.getPaymentAddressFromViewingKey(xfvk);
+  const indexedZeroAddress = await sapling.getPaymentAddressFromViewingKey(xfvk, 0);
   const nextAddress = await sapling.getNextPaymentAddressFromViewingKey(xfvk, address.index);
+  const nextFromNumber = await sapling.getNextPaymentAddressFromViewingKey(xfvk, 0);
   const diversifier = await sapling.getDiversifiedFromRawPaymentAddress(address.raw);
   const pkd = await sapling.getPkdFromRawPaymentAddress(address.raw);
   const rawFromIvk = await sapling.getRawPaymentAddressFromIncomingViewingKey(
@@ -145,13 +175,23 @@ test('built Node package preserves address derivation outputs', async () => {
     diversifier
   );
 
-  assert.equal(address.index.toString('hex'), '0000000000000000000000');
-  assert.equal(address.raw.toString('hex'), 'e8d03793cdd2bacc9c7041ad5ec1877b8ca3ada20125535e840498712bda116dbc506edaf52d94fb8c72de');
-  assert.equal(nextAddress.index.toString('hex'), '0100000000000000000000');
-  assert.equal(nextAddress.raw.toString('hex'), '020a7a6b0bf84d3e899f68376c89212336c7a6e7fa7552326126805d98310a9cbbb3cd030ccf4412de3b89');
-  assert.equal(diversifier.toString('hex'), 'e8d03793cdd2bacc9c7041');
-  assert.equal(pkd.toString('hex'), 'ad5ec1877b8ca3ada20125535e840498712bda116dbc506edaf52d94fb8c72de');
-  assert.equal(rawFromIvk.toString('hex'), address.raw.toString('hex'));
+  assertPureUint8Array(address.index, 'address.index');
+  assertPureUint8Array(address.raw, 'address.raw');
+  assertPureUint8Array(nextAddress.index, 'nextAddress.index');
+  assertPureUint8Array(nextAddress.raw, 'nextAddress.raw');
+  assertPureUint8Array(diversifier, 'diversifier');
+  assertPureUint8Array(pkd, 'pkd');
+  assertPureUint8Array(rawFromIvk, 'rawFromIvk');
+
+  assert.equal(bytesToHex(address.index), '0000000000000000000000');
+  assert.equal(bytesToHex(address.raw), 'e8d03793cdd2bacc9c7041ad5ec1877b8ca3ada20125535e840498712bda116dbc506edaf52d94fb8c72de');
+  assert.equal(bytesToHex(indexedZeroAddress.raw), bytesToHex(address.raw));
+  assert.equal(bytesToHex(nextAddress.index), '0100000000000000000000');
+  assert.equal(bytesToHex(nextAddress.raw), '020a7a6b0bf84d3e899f68376c89212336c7a6e7fa7552326126805d98310a9cbbb3cd030ccf4412de3b89');
+  assert.equal(bytesToHex(nextFromNumber.raw), bytesToHex(nextAddress.raw));
+  assert.equal(bytesToHex(diversifier), 'e8d03793cdd2bacc9c7041');
+  assert.equal(bytesToHex(pkd), 'ad5ec1877b8ca3ada20125535e840498712bda116dbc506edaf52d94fb8c72de');
+  assert.equal(bytesToHex(rawFromIvk), bytesToHex(address.raw));
 });
 
 test('built Node package preserves alternate path viewing-key and address outputs', async () => {
@@ -163,13 +203,13 @@ test('built Node package preserves alternate path viewing-key and address output
   const address = await sapling.getPaymentAddressFromViewingKey(xfvk);
 
   assert.equal(
-    xfvk.toString('hex'),
+    bytesToHex(xfvk),
     '0348c18375030000008d937bcf81ba430d5b49afc0a403367b1fd99879ecba41be051c5a4aa7d6e7e8b185c57b509c2536c4f2d326d766c8fab25447de5375a9328d649ddabd97a6a3db88049e02d207568afc42e07db2abed500b2701c01bbff36399764b81c0664f69b9e0fa1c4b3deb91d53beee871156121474b8b62ef24134478dc3499691af6becb50c363bb2ed9da5c3043ceb0f1a0527bf836b29a35f7c0c9f261123be56e'
   );
-  assert.equal(ovk.toString('hex'), '69b9e0fa1c4b3deb91d53beee871156121474b8b62ef24134478dc3499691af6');
-  assert.equal(ivk.toString('hex'), 'b0a5f337232f2c3dac70c2a410fa561fc45d8cc59cda246d31c8b1715a57d900');
-  assert.equal(address.index.toString('hex'), '0100000000000000000000');
-  assert.equal(address.raw.toString('hex'), '030ffb263a939e230e96dd0805ba6dbe98d91f30f3b1ac40a8bca48ce1304da1da1012f81415dd7061c5f1');
+  assert.equal(bytesToHex(ovk), '69b9e0fa1c4b3deb91d53beee871156121474b8b62ef24134478dc3499691af6');
+  assert.equal(bytesToHex(ivk), 'b0a5f337232f2c3dac70c2a410fa561fc45d8cc59cda246d31c8b1715a57d900');
+  assert.equal(bytesToHex(address.index), '0100000000000000000000');
+  assert.equal(bytesToHex(address.raw), '030ffb263a939e230e96dd0805ba6dbe98d91f30f3b1ac40a8bca48ce1304da1da1012f81415dd7061c5f1');
 });
 
 test('built Node package preserves Sapling merkle hashing outputs', async () => {
@@ -178,8 +218,16 @@ test('built Node package preserves Sapling merkle hashing outputs', async () => 
   const lhs = reverseHexBytes('87a086ae7d2252d58729b30263fb7b66308bf94ef59a76c9c86e7ea016536505');
   const rhs = reverseHexBytes('a75b84a125b2353da7e8d96ee2a15efe4de23df9601b9d9564ba59de57130406');
   const expected = reverseHexBytes('5bf43b5736c19b714d1f462c9d22ba3492c36e3d9bbd7ca24d94b440550aa561');
+  const actual = await sapling.merkleHash(25, lhs, rhs);
+  const actualFromHexDepth = await sapling.merkleHash('0x19', lhs, rhs);
+  const actualFromPaddedHexDepth = await sapling.merkleHash(' 0x19', lhs, rhs);
+  const actualFromSignedHexDepth = await sapling.merkleHash('+0x19', lhs, rhs);
 
-  assert.deepEqual(await sapling.merkleHash(25, lhs, rhs), expected);
+  assertPureUint8Array(actual, 'merkleHash');
+  assert.deepEqual(actual, expected);
+  assert.deepEqual(actualFromHexDepth, expected);
+  assert.deepEqual(actualFromPaddedHexDepth, expected);
+  assert.deepEqual(actualFromSignedHexDepth, expected);
 });
 
 test('built Node package preserves Octez empty-tree root', async () => {
@@ -216,19 +264,148 @@ test('built Node package preserves Octez payment-address and commitment vectors'
   // https://github.com/zcash-hackworks/zcash-test-vectors
   for (const vector of octezVectorCases) {
     const rawAddress = await sapling.getRawPaymentAddressFromIncomingViewingKey(
-      Buffer.from(vector.ivk, 'hex'),
-      Buffer.from(vector.diversifier, 'hex')
+      hexBytes(vector.ivk),
+      hexBytes(vector.diversifier)
     );
 
-    assert.equal(rawAddress.toString('hex'), `${vector.diversifier}${vector.pkd}`);
+    assertPureUint8Array(rawAddress, 'rawAddress');
+    assert.equal(bytesToHex(rawAddress), `${vector.diversifier}${vector.pkd}`);
     assert.equal(
       await sapling.verifyCommitment(
-        Buffer.from(vector.cmu, 'hex'),
+        hexBytes(vector.cmu),
         rawAddress,
         vector.value,
-        Buffer.from(vector.rcm, 'hex')
+        hexBytes(vector.rcm)
+      ),
+      true
+    );
+    assert.equal(
+      await sapling.verifyCommitment(
+        hexBytes(vector.cmu),
+        rawAddress,
+        BigInt(vector.value),
+        hexBytes(vector.rcm)
       ),
       true
     );
   }
+});
+
+test('withProvingContext drops proving context and propagates errors when action rejects', async (t) => {
+  const droppedContexts = [];
+  const originalDrop = wasmPkg.dropProvingContext;
+  t.after(() => {
+    wasmPkg.dropProvingContext = originalDrop;
+  });
+  wasmPkg.dropProvingContext = (ctx) => {
+    droppedContexts.push(ctx);
+    return originalDrop(ctx);
+  };
+
+  let capturedContext;
+  await assert.rejects(
+    () =>
+      sapling.withProvingContext(async (context) => {
+        capturedContext = context;
+        assert.equal(typeof context, 'number');
+        assert.notEqual(context, 0);
+        throw new Error('boom inside proving context');
+      }),
+    /boom inside proving context/
+  );
+
+  assert.deepEqual(droppedContexts, [capturedContext]);
+
+  await assert.rejects(
+    () => sapling.createBindingSignature(capturedContext, 0, new Uint8Array(32)),
+    /invalid or dropped sapling proving context/
+  );
+});
+
+test('input validation and binding errors report accurate parameter and function names', async () => {
+  const xfvk = await sapling.getExtendedFullViewingKey(seed0123, 'm/1/2h');
+  const ivk = await sapling.getIncomingViewingKey(xfvk);
+  const ivkWith0x = await sapling.getIncomingViewingKey(`0x${bytesToHex(xfvk)}`);
+  assert.deepEqual(ivkWith0x, ivk);
+
+  const crossRealmSeed = vm.runInNewContext('new Uint8Array(Array.from({ length: 32 }, (_, i) => i))');
+  const xfvkFromCrossRealm = await sapling.getExtendedFullViewingKey(crossRealmSeed, 'm/1/2h');
+  assert.deepEqual(xfvkFromCrossRealm, xfvk);
+
+  // Large valid hex strings (such as hex-encoded Sapling params) must not overflow the regex stack:
+  const largeHex = '00'.repeat(600_000);
+  await assert.rejects(
+    () => sapling.getIncomingViewingKey(largeHex),
+    (error) => !(error instanceof RangeError)
+  );
+
+  // Out-of-range or negative numeric diversifier indices must not wrap modulo 2^32:
+  await assert.rejects(
+    () => sapling.getPaymentAddressFromViewingKey(xfvk, -1),
+    /`index` is of invalid type|RangeError/
+  );
+  await assert.rejects(
+    () => sapling.getPaymentAddressFromViewingKey(xfvk, 2 ** 32),
+    /`index` is of invalid type|RangeError/
+  );
+
+  await assert.rejects(
+    () => sapling.getIncomingViewingKey('abc'),
+    /`viewingKey` is of invalid type/
+  );
+
+  await assert.rejects(
+    () => sapling.getRawPaymentAddressFromIncomingViewingKey(ivk, 'not-valid-hex!'),
+    /`diversifier` is of invalid type/
+  );
+
+  await assert.rejects(
+    () => sapling.deriveEphemeralPublicKey(new Uint8Array(5), new Uint8Array(32)),
+    /deriveEpkFromEsk: diversifier must be an array of 11 bytes/
+  );
+
+  const xsk = await sapling.getExtendedSpendingKey(seed0123, 'm/1/2h');
+  const pak = await sapling.getProofAuthorizingKey(xsk);
+  const address = await sapling.getPaymentAddressFromViewingKey(xfvk);
+  const scalarZero = new Uint8Array(32);
+
+  await assert.rejects(
+    () =>
+      sapling.withProvingContext(async (context) =>
+        sapling.prepareSpendDescriptionWithAuthorizingKey(
+          context,
+          pak,
+          address,
+          scalarZero,
+          scalarZero,
+          'not-a-u64',
+          scalarZero,
+          scalarZero
+        )
+      ),
+    /spendDescriptionFromPak: invalid value/
+  );
+});
+
+test('web Wasm entry and bundled/relocated Node Wasm entry initialize cleanly', async (t) => {
+  const webWasm = await import('../packages/sapling-wasm/pkg-web/index.js');
+  const webWasmBytes = readFileSync(new URL('../packages/sapling-wasm/pkg-web/index_bg.wasm', import.meta.url));
+  await webWasm.default({ module_or_path: webWasmBytes });
+
+  const expectedXfvk = await sapling.getExtendedFullViewingKey(seed0123, 'm/1/2h');
+  assert.deepEqual(webWasm.xfvk(seed0123, 'm/1/2h'), expectedXfvk);
+
+  const tempDir = mkdtempSync(join(tmpdir(), 'sapling-wasm-bundled-node-'));
+  t.after(() => {
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  const relocatedPkgPath = join(tempDir, 'index.js');
+  writeFileSync(
+    relocatedPkgPath,
+    readFileSync(new URL('../packages/sapling-wasm/pkg/index.js', import.meta.url), 'utf8')
+  );
+
+  const relocatedWasmPkg = require(relocatedPkgPath);
+  assert.deepEqual(relocatedWasmPkg.xfvk(seed0123, 'm/1/2h'), expectedXfvk);
 });

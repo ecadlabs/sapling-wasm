@@ -1,4 +1,15 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist/cjs",
+    "declaration": false,
+    "emitDeclarationOnly": false,
+    "esModuleInterop": false,
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    "ignoreDeprecations": "6.0",
+    "noEmit": false,
+    "sourceMap": false
+  },
   "include": ["./src/index.ts"]
 }

@@ -6,13 +6,14 @@ We currently provide security fixes for the latest `@taquito/sapling-wasm` relea
 
 | Release Line | Supported          |
 | ------------ | ------------------ |
-| 0.1.x        | :white_check_mark: |
-| < 0.1.0      | :x:                |
+| 0.3.x        | :white_check_mark: |
+| < 0.3.0      | :x:                |
 
 Current supported Node.js runtimes for this repository are:
 
 | Node.js | Supported          |
 | ------- | ------------------ |
+| 26.x    | :white_check_mark: |
 | 24.x    | :white_check_mark: |
 | 22.x    | :white_check_mark: |
 | < 22    | :x:                |

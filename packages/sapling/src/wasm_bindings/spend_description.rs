@@ -7,11 +7,10 @@ use zcash_primitives::merkle_tree::MerklePath;
 use zcash_primitives::primitives::{PaymentAddress, ProofGenerationKey};
 use zcash_primitives::sapling::Node;
 use zcash_primitives::zip32::ExtendedSpendingKey;
-use zcash_proofs::sapling::SaplingProvingContext;
 use zcash_proofs::ZcashParameters;
 
 use crate::common::utils::wasm_utils::{
-    js_dereference, js_deserialize, js_error_from, js_result_from, js_serialize_res,
+    js_deserialize, js_error_from, js_result_from, js_serialize_res, with_proving_context,
 };
 use crate::transaction::{
     prepare_spend_description, sign_spend_description, SpendDetails, SpendParameters,
@@ -44,30 +43,30 @@ pub fn wasm_spend_description_from_xsk(
     let anchor: bls12_381::Scalar = js_deserialize(anchor)?;
     let merkle_path: MerklePath<Node> = js_deserialize(merkle_path)?;
 
-    let ctx: &mut SaplingProvingContext = unsafe { js_dereference(ctx) };
-
     let params: &ZcashParameters = State::proof_params().map_err(js_error_from)?;
     let proving_key: &Parameters<Bls12> = &params.spend_params;
     let verifying_key: &PreparedVerifyingKey<Bls12> = &params.spend_vk;
 
-    let spend_description = prepare_spend_description(
-        ctx,
-        SpendDetails {
-            from_pak: &xsk.expsk.proof_generation_key(),
-            to_address: &payment_address,
-            value,
-        },
-        rcm,
-        ar,
-        anchor,
-        merkle_path,
-        SpendParameters {
-            proving_key,
-            verifying_key,
-        },
-    );
+    with_proving_context(ctx, |ctx| {
+        let spend_description = prepare_spend_description(
+            ctx,
+            SpendDetails {
+                from_pak: &xsk.expsk.proof_generation_key(),
+                to_address: &payment_address,
+                value,
+            },
+            rcm,
+            ar,
+            anchor,
+            merkle_path,
+            SpendParameters {
+                proving_key,
+                verifying_key,
+            },
+        );
 
-    js_serialize_res(spend_description)
+        js_serialize_res(spend_description)
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -90,34 +89,34 @@ pub fn wasm_spend_description_from_pak(
     let ar: jubjub::Scalar = js_deserialize(ar)?;
     let value: u64 = value
         .parse()
-        .or_else(|_| js_result_from("spendDescriptionFromXsk: invalid value"))?;
+        .or_else(|_| js_result_from("spendDescriptionFromPak: invalid value"))?;
     let anchor: bls12_381::Scalar = js_deserialize(anchor)?;
     let merkle_path: MerklePath<Node> = js_deserialize(merkle_path)?;
-
-    let ctx: &mut SaplingProvingContext = unsafe { js_dereference(ctx) };
 
     let params: &ZcashParameters = State::proof_params().map_err(js_error_from)?;
     let proving_key: &Parameters<Bls12> = &params.spend_params;
     let verifying_key: &PreparedVerifyingKey<Bls12> = &params.spend_vk;
 
-    let spend_description = prepare_spend_description(
-        ctx,
-        SpendDetails {
-            from_pak: &pak,
-            to_address: &payment_address,
-            value,
-        },
-        rcm,
-        ar,
-        anchor,
-        merkle_path,
-        SpendParameters {
-            proving_key,
-            verifying_key,
-        },
-    );
+    with_proving_context(ctx, |ctx| {
+        let spend_description = prepare_spend_description(
+            ctx,
+            SpendDetails {
+                from_pak: &pak,
+                to_address: &payment_address,
+                value,
+            },
+            rcm,
+            ar,
+            anchor,
+            merkle_path,
+            SpendParameters {
+                proving_key,
+                verifying_key,
+            },
+        );
 
-    js_serialize_res(spend_description)
+        js_serialize_res(spend_description)
+    })
 }
 
 #[wasm_bindgen(catch, js_name = "signSpendDescriptionWithXsk")]

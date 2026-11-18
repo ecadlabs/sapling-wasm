@@ -1,6 +1,6 @@
-#[cfg(any(test, feature = "c_bindings", feature = "wasm_bindings"))]
+#[cfg(any(test, feature = "wasm_bindings"))]
 pub(crate) use sapling_key::SaplingKey;
-#[cfg(any(feature = "c_bindings", feature = "wasm_bindings"))]
+#[cfg(feature = "wasm_bindings")]
 pub(crate) use viewing_key::crh_ivk;
 
 mod authorizing_key;

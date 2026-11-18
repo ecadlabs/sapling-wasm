@@ -1,10 +1,11 @@
 {
   "compilerOptions": {
-    "types": ["node"],
+    "rootDir": "./src",
+    "types": [],
     "allowJs": false,
     "declaration": false,
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "es2022",
+    "moduleResolution": "bundler",
     "target": "es2020",
     "lib": ["es2020", "dom"],
     "sourceMap": true,
