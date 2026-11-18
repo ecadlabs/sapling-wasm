@@ -1,19 +1,19 @@
 import { WasmSapling } from '../types'
-import { bufferFrom, stringFrom } from '../utils'
+import { bytesFrom, stringFrom } from '../utils'
 
 export function __wasm__computeNf(
   sapling: WasmSapling,
-  xfvk: Buffer | Uint8Array | string, 
-  address: Buffer | Uint8Array | string, 
-  value: string | number | BigInt,
-  rcm: Buffer | Uint8Array | string,
-  position: string | number | BigInt
-): Buffer {
-  const xfvkBuffer: Buffer = bufferFrom(xfvk, 'viewingKey', '`Buffer`, `Uint8Array` or hex string')
-  const addressBuffer: Buffer = bufferFrom(address, 'address', '`Buffer`, `Uint8Array` or hex string')
-  const valueString: string = stringFrom(value, 'value', '`number`, `BigInt` or `string`')
-  const rcmBuffer: Buffer = bufferFrom(rcm, 'rcm', '`Buffer`, `Uint8Array` or hex string')
-  const positionString: string = stringFrom(position, 'position', '`number`, `BigInt` or `string`')
+  xfvk: Uint8Array | string,
+  address: Uint8Array | string,
+  value: string | number | bigint,
+  rcm: Uint8Array | string,
+  position: string | number | bigint
+): Uint8Array {
+  const xfvkBytes: Uint8Array = bytesFrom(xfvk, 'viewingKey', '`Uint8Array` or hex string')
+  const addressBytes: Uint8Array = bytesFrom(address, 'address', '`Uint8Array` or hex string')
+  const valueString: string = stringFrom(value, 'value', '`number`, `bigint` or `string`')
+  const rcmBytes: Uint8Array = bytesFrom(rcm, 'rcm', '`Uint8Array` or hex string')
+  const positionString: string = stringFrom(position, 'position', '`number`, `bigint` or `string`')
 
-  return Buffer.from(sapling.computeNullifier(xfvkBuffer, addressBuffer, valueString, rcmBuffer, positionString))
+  return sapling.computeNullifier(xfvkBytes, addressBytes, valueString, rcmBytes, positionString)
 }

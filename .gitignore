@@ -4,13 +4,11 @@
 
 target
 **/*.rs.bk
-Cargo.lock
 pkg/
+pkg-web/
 
 node_modules
 
-.build
-.swiftpm
 .DS_Store
 
 .npmrc

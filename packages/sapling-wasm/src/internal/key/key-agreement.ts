@@ -1,9 +1,13 @@
 import { WasmSapling } from '../types'
-import { bufferFrom } from '../utils'
+import { bytesFrom } from '../utils'
 
-export function __wasm__keyAgreement(sapling: WasmSapling, p: Buffer | Uint8Array | string, sk: Buffer | Uint8Array | string): Buffer {
-  const pBuffer = bufferFrom(p, 'p', '`Buffer`, `Uint8Array` or hex string')
-  const skBuffer = bufferFrom(sk, 'sk', '`Buffer`, `Uint8Array` or hex string')
+export function __wasm__keyAgreement(
+  sapling: WasmSapling,
+  p: Uint8Array | string,
+  sk: Uint8Array | string
+): Uint8Array {
+  const pBytes: Uint8Array = bytesFrom(p, 'p', '`Uint8Array` or hex string')
+  const skBytes: Uint8Array = bytesFrom(sk, 'sk', '`Uint8Array` or hex string')
 
-  return Buffer.from(sapling.keyAgreement(pBuffer, skBuffer))
+  return sapling.keyAgreement(pBytes, skBytes)
 }

@@ -1,15 +1,15 @@
 import { WasmSapling } from '../types'
-import { bufferFrom, numberFrom } from '../utils'
+import { bytesFrom, numberFrom } from '../utils'
 
 export function __wasm__merkleHashForDepth(
   sapling: WasmSapling,
   depth: string | number,
-  lhs: Buffer | Uint8Array | string,
-  rhs: Buffer | Uint8Array | string
-): Buffer {
+  lhs: Uint8Array | string,
+  rhs: Uint8Array | string
+): Uint8Array {
   const depthNum: number = numberFrom(depth)
-  const lhsBuffer: Buffer = bufferFrom(lhs)
-  const rhsBuffer: Buffer = bufferFrom(rhs)
+  const lhsBytes: Uint8Array = bytesFrom(lhs)
+  const rhsBytes: Uint8Array = bytesFrom(rhs)
 
-  return Buffer.from(sapling.merkleHash(depthNum, lhsBuffer, rhsBuffer))
+  return sapling.merkleHash(depthNum, lhsBytes, rhsBytes)
 }

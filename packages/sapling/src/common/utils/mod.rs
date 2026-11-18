@@ -1,6 +1,3 @@
-#[cfg(feature = "c_bindings")]
-pub mod c_utils;
-
 #[cfg(feature = "wasm_bindings")]
 pub mod wasm_utils;
 

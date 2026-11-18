@@ -1,8 +1,8 @@
 /**
  * Prepare a sapling transaction
- * 
+ *
  * Call `npm run build` before running this example.
- * 
+ *
  * FIXME: create a valid transaction
  */
 
@@ -26,11 +26,33 @@ const SPEND_PARAMS_FILE_NAME = 'sapling-spend.params'
 const OUTPUT_PARAMS_FILE_NAME = 'sapling-output.params'
 const ZCASH_DOWNLOAD_URL = 'https://download.z.cash/downloads'
 
+const bytesToHex = (bytes: Uint8Array): string =>
+  Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+
+const hexToBytes = (hex: string): Uint8Array => {
+  const out = new Uint8Array(hex.length / 2)
+  for (let i = 0; i < out.length; i++) {
+    out[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16)
+  }
+  return out
+}
+
+const concatBytes = (chunks: readonly Uint8Array[]): Uint8Array => {
+  const total = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0)
+  const out = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    out.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return out
+}
+
 // a sapling transaction consists of a list of spend descriptions, list of output descriptions and a binding signature
 interface Transaction {
   spendDescriptions: SaplingSpendDescription[]
   outputDescriptions: SaplingOutputDescription[]
-  bindingSignature: Buffer
+  bindingSignature: Uint8Array
 }
 
 async function prepareAndSignTransaction(): Promise<Transaction> {
@@ -39,15 +61,18 @@ async function prepareAndSignTransaction(): Promise<Transaction> {
 
   const [account, inputs, outputs]: [Account, Input[], Output[]] = await setupAccounts()
 
-  // generate a public key re-randomizer used to pepare and sign spending descriptions
-  const ar: Buffer = await sapling.randR()
+  // generate a public key re-randomizer used to prepare and sign spending descriptions
+  const ar: Uint8Array = await sapling.randR()
   const transaction: Transaction = await createTransaction(account, inputs, outputs, ar)
 
   return transaction
 }
 
 async function initParameters(): Promise<void> {
-  const [spendParams, outputParams] = await Promise.all([prepareParams(SPEND_PARAMS_FILE_NAME), prepareParams(OUTPUT_PARAMS_FILE_NAME)])
+  const [spendParams, outputParams] = await Promise.all([
+    prepareParams(SPEND_PARAMS_FILE_NAME),
+    prepareParams(OUTPUT_PARAMS_FILE_NAME)
+  ])
 
   return sapling.initParameters(spendParams, outputParams)
 }
@@ -63,13 +88,19 @@ async function setupAccounts(): Promise<[Account, Input[], Output[]]> {
   return [alice, aliceInputs, aliceOutputs]
 }
 
-async function createTransaction(account: Account, inputs: Input[], outputs: Output[], ar: Buffer): Promise<Transaction> {
+async function createTransaction(
+  account: Account,
+  inputs: Input[],
+  outputs: Output[],
+  ar: Uint8Array
+): Promise<Transaction> {
   // all calls to `sapling#prepareSpendDescription`, `sapling#prepareOutputDescription` and `sapling#createBindingSignature`
   // must be performed with the same proving context, use `withProvingContext` to safely execute a block of code with a proving context instance
   const transaction: Transaction = await sapling.withProvingContext(async (context: number) => {
-    const spendDescriptions: SaplingSpendDescription[] = await Promise.all(
-      inputs.map(async (input: Input) => {
-        const unsignedDescription: SaplingUnsignedSpendDescription = await sapling.prepareSpendDescriptionWithSpendingKey(
+    const spendDescriptions: SaplingSpendDescription[] = []
+    for (const input of inputs) {
+      const unsignedDescription: SaplingUnsignedSpendDescription =
+        await sapling.prepareSpendDescriptionWithSpendingKey(
           context,
           account.spendingKey,
           input.address,
@@ -80,25 +111,31 @@ async function createTransaction(account: Account, inputs: Input[], outputs: Out
           await getWitness(input.position)
         )
 
-        const sighash = sighashSpendDescription(unsignedDescription)
-        const signedDescription: SaplingSpendDescription = await sapling.signSpendDescription(
-          unsignedDescription,
-          account.spendingKey,
-          ar,
-          sighash
-        )
+      const sighash = sighashSpendDescription(unsignedDescription)
+      const signedDescription: SaplingSpendDescription = await sapling.signSpendDescription(
+        unsignedDescription,
+        account.spendingKey,
+        ar,
+        sighash
+      )
 
-        return signedDescription
-      })
-    )
+      spendDescriptions.push(signedDescription)
+    }
 
     // generate a commitment randomness
     const rcm = await sapling.randR()
-    const outputDescriptions: SaplingOutputDescription[] = await Promise.all(
-      outputs.map(async (output: Output) => {
-        return sapling.prepareOutputDescription(context, account.viewingKey, output.destination, rcm, output.value)
-      })
-    )
+    const outputDescriptions: SaplingOutputDescription[] = []
+    for (const output of outputs) {
+      outputDescriptions.push(
+        await sapling.prepareOutputDescription(
+          context,
+          account.viewingKey,
+          output.destination,
+          rcm,
+          output.value
+        )
+      )
+    }
 
     const inputSum: number = inputs.reduce((sum: number, next: Input) => sum + next.value, 0)
     const outputSum: number = outputs.reduce((sum: number, next: Output) => sum + next.value, 0)
@@ -109,7 +146,7 @@ async function createTransaction(account: Account, inputs: Input[], outputs: Out
     const bindingSignature = await sapling.createBindingSignature(context, valueBalance, sighash)
 
     return {
-      spendDescriptions: spendDescriptions,
+      spendDescriptions,
       outputDescriptions,
       bindingSignature
     }
@@ -129,7 +166,7 @@ prepareAndSignTransaction()
       console.log('\t', desc)
     })
     console.log('transaction.bindingSignature')
-    console.log('\t', transaction.bindingSignature.toString('hex'))
+    console.log('\t', bytesToHex(transaction.bindingSignature))
   })
   .catch((error) => {
     console.warn(error)
@@ -161,12 +198,12 @@ interface AccountState {
 
 interface Account {
   name: AccountName
-  spendingKey: Buffer
-  viewingKey: Buffer
+  spendingKey: Uint8Array
+  viewingKey: Uint8Array
 }
 
 interface Input {
-  rcm: Buffer
+  rcm: Uint8Array
   position: number
   address: SaplingPaymentAddress
   value: number
@@ -179,11 +216,11 @@ interface Output {
 
 async function createAccount(name: AccountName): Promise<Account> {
   const mnemonic: string = bip39.generateMnemonic()
-  const seed: Buffer = await bip39.mnemonicToSeed(mnemonic, '')
+  const seed: Uint8Array = await bip39.mnemonicToSeed(mnemonic, '')
   const derivationPath: string = 'm/'
 
-  const spendingKey: Buffer = await sapling.getExtendedSpendingKey(seed, derivationPath)
-  const viewingKey: Buffer = await sapling.getExtendedFullViewingKey(seed, derivationPath)
+  const spendingKey: Uint8Array = await sapling.getExtendedSpendingKey(seed, derivationPath)
+  const viewingKey: Uint8Array = await sapling.getExtendedFullViewingKey(seed, derivationPath)
 
   return {
     name,
@@ -193,7 +230,7 @@ async function createAccount(name: AccountName): Promise<Account> {
 }
 
 async function getInputs(account: Account, value: number): Promise<Input[]> {
-  const rcm: Buffer = await sapling.randR()
+  const rcm: Uint8Array = await sapling.randR()
   const address: SaplingPaymentAddress = await sapling.getPaymentAddressFromViewingKey(account.viewingKey)
   const inputs: [number, number][] = []
 
@@ -206,19 +243,28 @@ async function getInputs(account: Account, value: number): Promise<Input[]> {
     sum += input[1]
   }
 
-  return inputs.map(([position, value]: [number, number]) => {
+  return inputs.map(([position, inputValue]: [number, number]) => {
     return {
       rcm,
       position,
       address,
-      value
+      value: inputValue
     }
   })
 }
 
-async function createOuputs(account: Account, to: Account, value: number, inputs: Input[]): Promise<Output[]> {
-  const paybackAddress: SaplingPaymentAddress = await sapling.getPaymentAddressFromViewingKey(account.viewingKey)
-  const destinationAddress: SaplingPaymentAddress = await sapling.getPaymentAddressFromViewingKey(to.viewingKey)
+async function createOuputs(
+  account: Account,
+  to: Account,
+  value: number,
+  inputs: Input[]
+): Promise<Output[]> {
+  const paybackAddress: SaplingPaymentAddress = await sapling.getPaymentAddressFromViewingKey(
+    account.viewingKey
+  )
+  const destinationAddress: SaplingPaymentAddress = await sapling.getPaymentAddressFromViewingKey(
+    to.viewingKey
+  )
 
   const inputSum: number = inputs.reduce((sum: number, next: Input) => sum + next.value, 0)
   const diff = inputSum - value
@@ -236,19 +282,31 @@ async function createOuputs(account: Account, to: Account, value: number, inputs
 }
 
 async function getWitness(position: number): Promise<string> {
-  const heightBuffer: Buffer = new BN(STATE.tree.height).toBuffer('le')
-  const positionBuffer: Buffer = new BN(position).toBuffer('le', 8)
+  const heightBytes: Uint8Array = new Uint8Array(new BN(STATE.tree.height).toArray('le'))
+  const positionBytes: Uint8Array = new Uint8Array(new BN(position).toArray('le', 8))
 
-  const neighboringHashes: Buffer[] = await getNeighboringHashes([], STATE.tree.height, new BN(position), STATE.tree.tree)
-  const witness: Buffer = neighboringHashes
-    .map((hash: Buffer) => Buffer.concat([new BN(hash.length).toBuffer('le'), hash]))
+  const neighboringHashes: Uint8Array[] = await getNeighboringHashes(
+    [],
+    STATE.tree.height,
+    new BN(position),
+    STATE.tree.tree
+  )
+  const witness: Uint8Array = neighboringHashes
+    .map((hash: Uint8Array) =>
+      concatBytes([new Uint8Array(new BN(hash.length).toArray('le')), hash])
+    )
     .reverse()
-    .reduce((acc: Buffer, next: Buffer) => Buffer.concat([acc, next]))
+    .reduce((acc: Uint8Array, next: Uint8Array) => concatBytes([acc, next]))
 
-  return Buffer.concat([heightBuffer, witness, positionBuffer]).toString('hex')
+  return bytesToHex(concatBytes([heightBytes, witness, positionBytes]))
 }
 
-async function getNeighboringHashes(acc: Buffer[], height: number, position: BN, tree: Tree): Promise<Buffer[]> {
+async function getNeighboringHashes(
+  acc: Uint8Array[],
+  height: number,
+  position: BN,
+  tree: Tree
+): Promise<Uint8Array[]> {
   if (typeof tree === 'undefined') {
     return Promise.reject('Invalid tree')
   } else if (typeof tree === 'string') {
@@ -259,52 +317,61 @@ async function getNeighboringHashes(acc: Buffer[], height: number, position: BN,
       ? [position, tree[1], tree[2]]
       : [position.sub(full), tree[2], tree[1]]
 
-    return getNeighboringHashes([await getRootHeight(otherTree, height - 1), ...acc], height - 1, nextPosition, nextTree)
+    return getNeighboringHashes(
+      [await getRootHeight(otherTree, height - 1), ...acc],
+      height - 1,
+      nextPosition,
+      nextTree
+    )
   }
 }
 
-async function getRootHeight(tree: Tree, height: number): Promise<Buffer> {
+async function getRootHeight(tree: Tree, height: number): Promise<Uint8Array> {
   if (typeof tree === 'undefined') {
     const uncommitedHashes = await createUncommitedHashes()
     return uncommitedHashes[height]
   } else if (typeof tree === 'string') {
-    return Buffer.from(tree, 'hex')
+    return hexToBytes(tree)
   } else {
-    return Buffer.from(tree[0], 'hex')
+    return hexToBytes(tree[0])
   }
 }
 
-async function createUncommitedHashes(): Promise<Buffer[]> {
+async function createUncommitedHashes(): Promise<Uint8Array[]> {
   const height: number = STATE.tree.height
-  const res: Buffer[] = [Buffer.from(uncomittedHash, 'hex')]
+  const res: Uint8Array[] = [hexToBytes(uncomittedHash)]
   for (var i = 0; i < height; i++) {
-    const hash: Buffer = res[i]
+    const hash: Uint8Array = res[i]
     res[i + 1] = await sapling.merkleHash(i, hash, hash)
   }
 
   return res
 }
 
-function sighashDescriptions(spendDescriptions: SaplingSpendDescription[], outputDescriptions: SaplingOutputDescription[]): Buffer {
-  const spendBytes: Buffer = spendDescriptions.reduce(
-    (buffer: Buffer, next: SaplingSpendDescription) => Buffer.concat([buffer, next.cv, next.nf, next.rk, next.proof]),
-    Buffer.alloc(0)
-  )
-  
-  const outputBytes: Buffer = outputDescriptions.reduce(
-    (buffer: Buffer, next: SaplingOutputDescription) => Buffer.concat([buffer, next.cv, next.cm, next.epk, next.cenc, next.cout, next.proof]),
-    Buffer.alloc(0)
+function sighashDescriptions(
+  spendDescriptions: SaplingSpendDescription[],
+  outputDescriptions: SaplingOutputDescription[]
+): Uint8Array {
+  const spendBytes: Uint8Array = spendDescriptions.reduce(
+    (bytes: Uint8Array, next: SaplingSpendDescription) =>
+      concatBytes([bytes, next.cv, next.nf, next.rk, next.proof]),
+    new Uint8Array(0)
   )
 
-  return Buffer.concat([spendBytes, outputBytes])
+  const outputBytes: Uint8Array = outputDescriptions.reduce(
+    (bytes: Uint8Array, next: SaplingOutputDescription) =>
+      concatBytes([bytes, next.cv, next.cm, next.epk, next.cenc, next.cout, next.proof]),
+    new Uint8Array(0)
+  )
+
+  return concatBytes([spendBytes, outputBytes])
 }
 
-function sighashSpendDescription(description: SaplingUnsignedSpendDescription): Buffer {
-  return Buffer.concat([description.cv, description.nf, description.rk, description.proof])
-
+function sighashSpendDescription(description: SaplingUnsignedSpendDescription): Uint8Array {
+  return concatBytes([description.cv, description.nf, description.rk, description.proof])
 }
 
-async function prepareParams(name: string): Promise<Buffer> {
+async function prepareParams(name: string): Promise<Uint8Array> {
   const paramsFilePath: string = path.resolve(SAPLING_PARAMS_DIR, name)
 
   if (!fs.existsSync(paramsFilePath)) {
@@ -315,7 +382,9 @@ async function prepareParams(name: string): Promise<Buffer> {
 }
 
 async function fetchSaplingParams(name: string): Promise<void> {
-  const response: AxiosResponse = await axios.get(`${ZCASH_DOWNLOAD_URL}/${name}`, { responseType: 'stream' })
+  const response: AxiosResponse = await axios.get(`${ZCASH_DOWNLOAD_URL}/${name}`, {
+    responseType: 'stream'
+  })
 
   fs.mkdirSync(SAPLING_PARAMS_DIR, { recursive: true })
   const writer: fs.WriteStream = fs.createWriteStream(path.resolve(SAPLING_PARAMS_DIR, name))

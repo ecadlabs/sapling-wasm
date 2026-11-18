@@ -1,6 +1,6 @@
 {
   "name": "sapling-wasm",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Sapling Wasm workspace for Taquito and compatible consumers.",
   "private": true,
   "author": "ECAD Labs Inc <info@ecadlabs.com>",
@@ -19,30 +19,30 @@
   },
   "packageManager": "npm@11.12.1",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13.0"
   },
   "workspaces": [
     "packages/sapling-wasm"
   ],
   "scripts": {
-    "clean": "rimraf node_modules packages/sapling-wasm/node_modules packages/sapling-wasm/dist packages/sapling-wasm/pkg",
+    "clean": "rimraf node_modules packages/sapling-wasm/node_modules packages/sapling-wasm/dist packages/sapling-wasm/pkg packages/sapling-wasm/pkg-web",
     "build": "npm run -w @taquito/sapling-wasm build",
-    "test": "npm run test:repo && npm run test:rust",
+    "lint": "eslint",
+    "test": "npm run lint && npm run test:repo && npm run test:rust",
     "test:repo": "npm run build && node --test tests/*.test.mjs",
-    "test:rust": "cargo test --manifest-path packages/sapling/Cargo.toml && npm run test:rust:warnings && npm run test:rust:wasm-warnings",
-    "test:rust:warnings": "RUSTFLAGS='-D warnings' cargo test --manifest-path packages/sapling/Cargo.toml --quiet",
-    "test:rust:wasm-warnings": "RUSTFLAGS='-D warnings' cargo check --manifest-path packages/sapling/Cargo.toml --features wasm_bindings --quiet",
+    "test:rust": "cargo test --locked --manifest-path packages/sapling/Cargo.toml && npm run test:rust:warnings && npm run test:rust:wasm-warnings",
+    "test:rust:warnings": "RUSTFLAGS='-D warnings' cargo test --locked --manifest-path packages/sapling/Cargo.toml --quiet",
+    "test:rust:wasm-warnings": "RUSTFLAGS='-D warnings' cargo check --locked --manifest-path packages/sapling/Cargo.toml --features wasm_bindings --quiet",
     "version:check": "node scripts/sync-workspace-version.js --check",
     "version:sync": "node scripts/sync-workspace-version.js"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@wasm-tool/wasm-pack-plugin": "^1.7.0",
-    "rimraf": "^6.1.3",
-    "ts-loader": "^9.5.7",
-    "typescript": "^5.9.3",
-    "webpack": "^5.106.1",
-    "webpack-cli": "^7.0.2",
-    "webpack-sources": "^3.3.4"
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
+    "rimraf": "^6.1.4",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.73.0"
   }
 }

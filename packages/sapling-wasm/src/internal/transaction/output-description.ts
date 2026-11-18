@@ -2,32 +2,32 @@ import { SaplingOutputDescription, SaplingPartialOutputDescription, SaplingPayme
 
 import { WasmSapling } from '../types'
 import { isPaymentAddress } from '../address/payment-address'
-import { stringFrom, bufferFrom } from '../utils'
+import { bytesFrom, stringFrom } from '../utils'
 
 export function __wasm__outputDescriptionFromXfvk(
   sapling: WasmSapling,
   context: number,
-  xfvk: Buffer | Uint8Array | string,
-  to: SaplingPaymentAddress | Buffer | Uint8Array | string,
-  rcm: Buffer | Uint8Array | string,
-  value: string | number | BigInt,
-  memo?: Buffer | Uint8Array | string
+  xfvk: Uint8Array | string,
+  to: SaplingPaymentAddress | Uint8Array | string,
+  rcm: Uint8Array | string,
+  value: string | number | bigint,
+  memo?: Uint8Array | string
 ): SaplingOutputDescription {
-  const xfvkBuffer: Buffer = bufferFrom(xfvk, 'viewingKey', '`Buffer`, `Uint8Array` or hex string')
-  const toBuffer: Buffer = bufferFrom(
+  const xfvkBytes: Uint8Array = bytesFrom(xfvk, 'viewingKey', '`Uint8Array` or hex string')
+  const toBytes: Uint8Array = bytesFrom(
     isPaymentAddress(to) ? to.raw : to,
     'destination',
-    '`SaplingPaymentAddress`, `Buffer`, `Uint8Array` or hex string'
+    '`SaplingPaymentAddress`, `Uint8Array` or hex string'
   )
-  const rcmBuffer: Buffer = bufferFrom(rcm, 'rcm', '`Buffer`, `Uint8Array` or hex string')
-  const valueString: string = stringFrom(value, 'value', '`number`, `BigInt` or `string`')
-  const memoBuffer: Buffer | undefined = memo !== undefined ? bufferFrom(memo, 'memo', '`Buffer`, `Uint8Array` or hex string') : undefined
+  const rcmBytes: Uint8Array = bytesFrom(rcm, 'rcm', '`Uint8Array` or hex string')
+  const valueString: string = stringFrom(value, 'value', '`number`, `bigint` or `string`')
+  const memoBytes: Uint8Array | undefined =
+    memo !== undefined ? bytesFrom(memo, 'memo', '`Uint8Array` or hex string') : undefined
 
-  const outputDescription: Buffer = Buffer.from(
-    memoBuffer !== undefined
-      ? sapling.outputDescriptionFromXfvkWithMemo(context, xfvkBuffer, toBuffer, rcmBuffer, valueString, memoBuffer)
-      : sapling.outputDescriptionFromXfvk(context, xfvkBuffer, toBuffer, rcmBuffer, valueString)
-  )
+  const outputDescription: Uint8Array =
+    memoBytes !== undefined
+      ? sapling.outputDescriptionFromXfvkWithMemo(context, xfvkBytes, toBytes, rcmBytes, valueString, memoBytes)
+      : sapling.outputDescriptionFromXfvk(context, xfvkBytes, toBytes, rcmBytes, valueString)
 
   return {
     cv: outputDescription.slice(0, 32) /* 32 bytes */,
@@ -42,21 +42,27 @@ export function __wasm__outputDescriptionFromXfvk(
 export function __wasm__partialOutputDescription(
   sapling: WasmSapling,
   context: number,
-  to: SaplingPaymentAddress | Buffer | Uint8Array | string,
-  rcm: Buffer | Uint8Array | string,
-  esk: Buffer | Uint8Array | string,
-  value: string | number | BigInt
+  to: SaplingPaymentAddress | Uint8Array | string,
+  rcm: Uint8Array | string,
+  esk: Uint8Array | string,
+  value: string | number | bigint
 ): SaplingPartialOutputDescription {
-  const toBuffer: Buffer = bufferFrom(
+  const toBytes: Uint8Array = bytesFrom(
     isPaymentAddress(to) ? to.raw : to,
     'destination',
-    '`SaplingPaymentAddress`, `Buffer`, `Uint8Array` or hex string'
+    '`SaplingPaymentAddress`, `Uint8Array` or hex string'
   )
-  const rcmBuffer: Buffer = bufferFrom(rcm, 'rcm', '`Buffer`, `Uint8Array` or hex string')
-  const eskBuffer: Buffer = bufferFrom(esk, 'esk', '`Buffer`, `Uint8Array` or hex string')
-  const valueString: string = stringFrom(value, 'value', '`number`, `BigInt` or `string`')
+  const rcmBytes: Uint8Array = bytesFrom(rcm, 'rcm', '`Uint8Array` or hex string')
+  const eskBytes: Uint8Array = bytesFrom(esk, 'esk', '`Uint8Array` or hex string')
+  const valueString: string = stringFrom(value, 'value', '`number`, `bigint` or `string`')
 
-  const outputDescription: Buffer = Buffer.from(sapling.partialOutputDescription(context, toBuffer, rcmBuffer, eskBuffer, valueString))
+  const outputDescription: Uint8Array = sapling.partialOutputDescription(
+    context,
+    toBytes,
+    rcmBytes,
+    eskBytes,
+    valueString
+  )
 
   return {
     cv: outputDescription.slice(0, 32) /* 32 bytes */,
@@ -66,12 +72,12 @@ export function __wasm__partialOutputDescription(
 }
 
 export function __wasm__deriveEpkFromEsk(
-  sapling: WasmSapling, 
-  diversifier: Buffer | Uint8Array | string, 
-  esk: Buffer | Uint8Array | string
-): Buffer {
-  const diversifierBuffer: Buffer = bufferFrom(diversifier, 'diversifier', '`Buffer`, `Uint8Array` or hex string')
-  const eskBuffer: Buffer = bufferFrom(esk, 'esk', '`Buffer`, `Uint8Array` or hex string')
+  sapling: WasmSapling,
+  diversifier: Uint8Array | string,
+  esk: Uint8Array | string
+): Uint8Array {
+  const diversifierBytes: Uint8Array = bytesFrom(diversifier, 'diversifier', '`Uint8Array` or hex string')
+  const eskBytes: Uint8Array = bytesFrom(esk, 'esk', '`Uint8Array` or hex string')
 
-  return Buffer.from(sapling.deriveEpkFromEsk(diversifierBuffer, eskBuffer))
+  return sapling.deriveEpkFromEsk(diversifierBytes, eskBytes)
 }

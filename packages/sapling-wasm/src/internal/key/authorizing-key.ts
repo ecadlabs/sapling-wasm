@@ -1,8 +1,8 @@
 import { WasmSapling } from '../types'
-import { bufferFrom } from '../utils'
+import { bytesFrom } from '../utils'
 
-export function __wasm__pak_from_xsk(sapling: WasmSapling, xsk: Buffer | Uint8Array | string): Buffer {
-  const xskBuffer: Buffer = bufferFrom(xsk, 'spendingKey', '`Buffer`, `Uint8Array` or hex string')
+export function __wasm__pak_from_xsk(sapling: WasmSapling, xsk: Uint8Array | string): Uint8Array {
+  const xskBytes: Uint8Array = bytesFrom(xsk, 'spendingKey', '`Uint8Array` or hex string')
 
-  return Buffer.from(sapling.pakFromXsk(xskBuffer))
+  return sapling.pakFromXsk(xskBytes)
 }

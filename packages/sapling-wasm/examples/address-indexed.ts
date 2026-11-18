@@ -8,14 +8,17 @@ import * as sapling from '@taquito/sapling-wasm'
 import { SaplingPaymentAddress } from '@taquito/sapling-wasm'
 import * as bip39 from 'bip39'
 
+const bytesToHex = (bytes: Uint8Array): string =>
+  Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+
 async function createIndexedAddress(): Promise<SaplingPaymentAddress> {
   const mnemonic: string = bip39.generateMnemonic()
-  const seed: Buffer = await bip39.mnemonicToSeed(mnemonic, '')
+  const seed: Uint8Array = await bip39.mnemonicToSeed(mnemonic, '')
   const derivationPath: string = 'm/'
 
-  const viewingKey: Buffer = await sapling.getExtendedFullViewingKey(seed, derivationPath)
+  const viewingKey: Uint8Array = await sapling.getExtendedFullViewingKey(seed, derivationPath)
 
-  const index: Buffer | Int8Array | string | number = 1
+  const index: Uint8Array | string | number = 1
 
   // call `sapling#getPaymentAddressFromViewingKey` with an extended full viewing key and a specified diversifier index
   // to get a payment address with this or the next valid index
@@ -26,8 +29,8 @@ async function createIndexedAddress(): Promise<SaplingPaymentAddress> {
 
 createIndexedAddress()
   .then((address: SaplingPaymentAddress) => {
-    console.log('address.index =', address.index.toString('hex'))
-    console.log('address.raw =', address.raw.toString('hex'))
+    console.log('address.index =', bytesToHex(address.index))
+    console.log('address.raw =', bytesToHex(address.raw))
   })
   .catch((error) => {
     console.warn(error)

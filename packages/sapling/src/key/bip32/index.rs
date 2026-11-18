@@ -148,7 +148,7 @@ mod tests {
 
     #[test]
     fn fails_with_parsing_error_if_index_is_too_big() {
-        let too_big = create_index(&(std::u64::MAX).to_string()[..]).unwrap_err();
+        let too_big = create_index(&u64::MAX.to_string()).unwrap_err();
 
         assert_eq!(
             too_big,

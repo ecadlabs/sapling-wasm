@@ -1,7 +1,26 @@
+use std::collections::BTreeMap;
+use std::sync::{Mutex, OnceLock};
+
 use wasm_bindgen::JsValue;
-use wasm_bindgen::__rt::WasmRefCell;
+use zcash_proofs::sapling::SaplingProvingContext;
 
 use crate::common::traits::Serializable;
+
+struct ProvingContextRegistry {
+    next_id: u32,
+    contexts: BTreeMap<u32, SaplingProvingContext>,
+}
+
+static PROVING_CONTEXTS: OnceLock<Mutex<ProvingContextRegistry>> = OnceLock::new();
+
+fn proving_contexts() -> &'static Mutex<ProvingContextRegistry> {
+    PROVING_CONTEXTS.get_or_init(|| {
+        Mutex::new(ProvingContextRegistry {
+            next_id: 1,
+            contexts: BTreeMap::new(),
+        })
+    })
+}
 
 pub fn js_serialize<S, E>(value: S) -> Result<Vec<u8>, JsValue>
 where
@@ -39,23 +58,48 @@ pub fn js_error_from<E: ToString>(error: E) -> JsValue {
     JsValue::from(error.to_string())
 }
 
-pub fn js_reference<T>(object: T) -> u32 {
-    let ref_cell = WasmRefCell::new(object);
-    let boxed = Box::new(ref_cell);
-
-    Box::into_raw(boxed) as u32
+pub fn init_proving_context() -> Result<u32, JsValue> {
+    let mut registry = proving_contexts()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if registry.next_id == 0 {
+        return Err(js_error_from("sapling proving context handle space exhausted"));
+    }
+    let id = registry.next_id;
+    registry.next_id = registry.next_id.wrapping_add(1);
+    registry.contexts.insert(id, SaplingProvingContext::new());
+    Ok(id)
 }
 
-pub unsafe fn js_dereference<'a, T>(pointer: u32) -> &'a mut T {
-    let pointer = pointer as *mut WasmRefCell<T>;
-    let ref_cell = &mut *pointer;
-    ref_cell.get_mut()
+pub fn with_proving_context<R, F>(ctx: u32, f: F) -> Result<R, JsValue>
+where
+    F: FnOnce(&mut SaplingProvingContext) -> Result<R, JsValue>,
+{
+    let mut context = {
+        let mut registry = proving_contexts()
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        registry
+            .contexts
+            .remove(&ctx)
+            .ok_or_else(|| js_error_from("invalid or dropped sapling proving context"))?
+    };
+
+    let result = f(&mut context);
+
+    let mut registry = proving_contexts()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    registry.contexts.insert(ctx, context);
+
+    result
 }
 
-pub unsafe fn js_drop_reference<T>(pointer: u32) {
-    let pointer = pointer as *mut WasmRefCell<T>;
-    (*pointer).borrow_mut(); // ensure no active borrows
-    drop(Box::from_raw(pointer));
+pub fn drop_proving_context(ctx: u32) {
+    let mut registry = proving_contexts()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    registry.contexts.remove(&ctx);
 }
 
 #[cfg(test)]

@@ -36,26 +36,26 @@ import * as sapling from '@taquito/sapling-wasm'
 import { SaplingPaymentAddress } from '@taquito/sapling-wasm'
 
 const mnemonic: string = bip39.generateMnemonic()
-const seed: Buffer = await bip39.mnemonicToSeed(mnemonic, '')
+const seed: Uint8Array = await bip39.mnemonicToSeed(mnemonic, '')
 const derivationPath: string = 'm/'
 
 // create an extended spending key
-const spendingKey: Buffer = await sapling.getExtendedSpendingKey(seed, derivationPath)
-console.log('spendingKey =', spendingKey.toString('hex'))
+const spendingKey: Uint8Array = await sapling.getExtendedSpendingKey(seed, derivationPath)
+console.log('spendingKey =', Buffer.from(spendingKey).toString('hex'))
 
 // create an extended full viewing key
-const viewingKey: Buffer = await sapling.getExtendedFullViewingKey(seed, derivationPath)
-console.log('viewingKey =', viewingKey.toString('hex'))
+const viewingKey: Uint8Array = await sapling.getExtendedFullViewingKey(seed, derivationPath)
+console.log('viewingKey =', Buffer.from(viewingKey).toString('hex'))
 
 // get default address
 const address: SaplingPaymentAddress = await sapling.getPaymentAddressFromViewingKey(viewingKey)
 console.log(
-  'address.index =', address.index.toString('hex'),
-  'address.raw =', address.raw.toString('hex')
+  'address.index =', Buffer.from(address.index).toString('hex'),
+  'address.raw =', Buffer.from(address.raw).toString('hex')
 )
 ```
 
-More advanced examples can be found in `js/examples`.
+More advanced examples can be found in `packages/sapling-wasm/examples`.
 
 ## Development
 
